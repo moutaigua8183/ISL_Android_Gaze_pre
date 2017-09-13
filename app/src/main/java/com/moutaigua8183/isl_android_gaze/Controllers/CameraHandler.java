@@ -1,17 +1,30 @@
 package com.moutaigua8183.isl_android_gaze.Controllers;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.ImageReader;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.content.PermissionChecker;
+import android.support.v4.content.pm.ActivityInfoCompat;
 import android.util.Log;
+import android.util.Size;
+import android.util.SparseIntArray;
+import android.view.Surface;
 import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Mou on 9/12/2017.
@@ -106,8 +119,49 @@ public class CameraHandler {
         }
     }
 
-    public void takePicture(){
+    public void takePicture(@NonNull ImageReader imageReader){
+        if ( null==frontCamera) {
+            Log.e(LOG_TAG, "No front camera");
+            return;
+        }
+        try {
+            CameraCharacteristics characteristics = this.cameraManager.getCameraCharacteristics(frontCamera.getId());
+            Size[] jpegSizes = null;
+            StreamConfigurationMap streamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            if (streamConfigurationMap != null) {
+                jpegSizes = streamConfigurationMap.getOutputSizes(ImageFormat.JPEG);
+            }
+            final boolean jpegSizesNotEmpty = jpegSizes != null && 0 < jpegSizes.length;
+            int width = jpegSizesNotEmpty ? jpegSizes[0].getWidth() : 640;
+            int height = jpegSizesNotEmpty ? jpegSizes[0].getHeight() : 480;
+            //final ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 1);
+            final List<Surface> outputSurfaces = new ArrayList<>();
+            outputSurfaces.add(imageReader.getSurface());
+            CaptureRequest.Builder captureBuilder = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.addTarget(imageReader.getSurface());
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_HDR);
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
+            reader.setOnImageAvailableListener(onImageAvailableListener, null);
+            cameraDevice.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
+                        @Override
+                        public void onConfigured(@NonNull CameraCaptureSession session) {
+                            try {
+                                session.capture(captureBuilder.build(), captureListener, null);
+                            } catch (CameraAccessException e) {
+                                Log.e(TAG, " exception occurred while accessing " + currentCameraId, e);
+                            }
+                        }
 
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                        }
+                    }
+                    , null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -126,6 +180,16 @@ public class CameraHandler {
         }
         Log.d( LOG_TAG, "Front camera ID: " + frontCameraId );
         return frontCameraId;
+    }
+
+    private int getOrientation(){
+        int rotation = ((Activity)this.ctxt).getWindowManager().getDefaultDisplay().getRotation();
+        SparseIntArray ORIENTATIONS = new SparseIntArray();
+        ORIENTATIONS.append(Surface.ROTATION_0, 270);
+        ORIENTATIONS.append(Surface.ROTATION_90, 180);
+        ORIENTATIONS.append(Surface.ROTATION_180, 90);
+        ORIENTATIONS.append(Surface.ROTATION_270, 0);
+        return ORIENTATIONS.get(rotation);
     }
 
 
