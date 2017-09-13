@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
@@ -38,7 +39,7 @@ public class CameraHandler {
     private Context ctxt;
     private CameraManager cameraManager;
     private CameraDevice frontCamera;
-    private String frontCameraId;
+    private StreamConfigurationMap frontCameraStreamConfigurationMap;
     private CameraDevice.StateCallback stateCallback;
 
     // private constructor
@@ -46,6 +47,7 @@ public class CameraHandler {
         this.ctxt = context;
         cameraManager = (CameraManager) ctxt.getSystemService(Context.CAMERA_SERVICE);
         frontCamera = null;
+        frontCameraStreamConfigurationMap = null;
         stateCallback = new CameraDevice.StateCallback() {
             @Override
             public void onOpened(@NonNull CameraDevice camera) {
@@ -92,6 +94,7 @@ public class CameraHandler {
                 if (this.ctxt.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
                         && this.ctxt.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     this.cameraManager.openCamera(frontCameraId, this.stateCallback, null);
+                    initFrontCameraStreamConfigurationMap();
                 } else {
                     Log.d(LOG_TAG, "Can\'t open camera because of no permission");
                     Toast.makeText(this.ctxt, "Can't open camera because of no permission", Toast.LENGTH_SHORT);
@@ -100,6 +103,7 @@ public class CameraHandler {
                 if ( PermissionChecker.checkCallingOrSelfPermission(this.ctxt, Manifest.permission.CAMERA)== PackageManager.PERMISSION_GRANTED
                         && PermissionChecker.checkCallingOrSelfPermission(this.ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     this.cameraManager.openCamera(frontCameraId, this.stateCallback, null);
+                    initFrontCameraStreamConfigurationMap();
                 } else {
                     Log.d(LOG_TAG, "Can\'t open camera because of no permission");
                     Toast.makeText(this.ctxt, "Can't open camera because of no permission", Toast.LENGTH_SHORT);
@@ -119,38 +123,33 @@ public class CameraHandler {
         }
     }
 
-    public void takePicture(@NonNull ImageReader imageReader){
+    public void takePicture(@NonNull ImageReader imageReader, int imageFormat){
         if ( null==frontCamera) {
             Log.e(LOG_TAG, "No front camera");
             return;
         }
         try {
-            CameraCharacteristics characteristics = this.cameraManager.getCameraCharacteristics(frontCamera.getId());
-            Size[] jpegSizes = null;
-            StreamConfigurationMap streamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            if (streamConfigurationMap != null) {
-                jpegSizes = streamConfigurationMap.getOutputSizes(ImageFormat.JPEG);
-            }
-            final boolean jpegSizesNotEmpty = jpegSizes != null && 0 < jpegSizes.length;
-            int width = jpegSizesNotEmpty ? jpegSizes[0].getWidth() : 640;
-            int height = jpegSizesNotEmpty ? jpegSizes[0].getHeight() : 480;
+            Size[] imageSize = frontCameraStreamConfigurationMap.getOutputSizes(imageFormat);
+            final boolean jpegSizesNotEmpty = imageSize != null && 0 < imageSize.length;
+            int width = jpegSizesNotEmpty ? imageSize[0].getWidth() : 640;
+            int height = jpegSizesNotEmpty ? imageSize[0].getHeight() : 480;
             //final ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 1);
             final List<Surface> outputSurfaces = new ArrayList<>();
             outputSurfaces.add(imageReader.getSurface());
-            CaptureRequest.Builder captureBuilder = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            final CaptureRequest.Builder captureBuilder = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(imageReader.getSurface());
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_HDR);
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
-            reader.setOnImageAvailableListener(onImageAvailableListener, null);
-            cameraDevice.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
+            imageReader.setOnImageAvailableListener(onImageAvailableListener, null);
+            frontCamera.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             try {
                                 session.capture(captureBuilder.build(), captureListener, null);
                             } catch (CameraAccessException e) {
-                                Log.e(TAG, " exception occurred while accessing " + currentCameraId, e);
+                                Log.e(LOG_TAG, " exception occurred while accessing " + frontCamera.getId(), e);
                             }
                         }
 
@@ -162,6 +161,10 @@ public class CameraHandler {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    public Size[] getFrontCameraPictureSize(int format){
+        return frontCameraStreamConfigurationMap.getOutputSizes(format);
     }
 
 
@@ -180,6 +183,16 @@ public class CameraHandler {
         }
         Log.d( LOG_TAG, "Front camera ID: " + frontCameraId );
         return frontCameraId;
+    }
+
+    private void initFrontCameraStreamConfigurationMap(){
+        try {
+            CameraCharacteristics characteristics = this.cameraManager.getCameraCharacteristics(frontCamera.getId());
+            frontCameraStreamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        } catch (CameraAccessException e) {
+            Log.d(LOG_TAG, "Fail to get front camera StreamConfigurationMap");
+            e.printStackTrace();
+        }
     }
 
     private int getOrientation(){
