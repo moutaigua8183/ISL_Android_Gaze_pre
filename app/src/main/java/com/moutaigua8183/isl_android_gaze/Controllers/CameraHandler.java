@@ -15,6 +15,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Build;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.content.PermissionChecker;
 import android.support.v4.content.pm.ActivityInfoCompat;
@@ -93,7 +94,7 @@ public class CameraHandler {
             if(Build.VERSION.SDK_INT > 22) {
                 if (this.ctxt.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
                         && this.ctxt.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-                    this.cameraManager.openCamera(frontCameraId, this.stateCallback, null);
+                    this.cameraManager.openCamera(frontCameraId, this.stateCallback, new Handler());
                     initFrontCameraStreamConfigurationMap();
                 } else {
                     Log.d(LOG_TAG, "Can\'t open camera because of no permission");
@@ -123,16 +124,16 @@ public class CameraHandler {
         }
     }
 
-    public void takePicture(@NonNull ImageReader imageReader, int imageFormat){
+    public void takePicture(@NonNull ImageReader imageReader){
         if ( null==frontCamera) {
             Log.e(LOG_TAG, "No front camera");
             return;
         }
         try {
-            Size[] imageSize = frontCameraStreamConfigurationMap.getOutputSizes(imageFormat);
-            final boolean jpegSizesNotEmpty = imageSize != null && 0 < imageSize.length;
-            int width = jpegSizesNotEmpty ? imageSize[0].getWidth() : 640;
-            int height = jpegSizesNotEmpty ? imageSize[0].getHeight() : 480;
+//            Size[] imageSize = frontCameraStreamConfigurationMap.getOutputSizes(imageFormat);
+//            final boolean jpegSizesNotEmpty = imageSize != null && 0 < imageSize.length;
+//            int width = jpegSizesNotEmpty ? imageSize[0].getWidth() : 640;
+//            int height = jpegSizesNotEmpty ? imageSize[0].getHeight() : 480;
             //final ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 1);
             final List<Surface> outputSurfaces = new ArrayList<>();
             outputSurfaces.add(imageReader.getSurface());
@@ -142,12 +143,11 @@ public class CameraHandler {
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_HDR);
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
-            imageReader.setOnImageAvailableListener(onImageAvailableListener, null);
             frontCamera.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             try {
-                                session.capture(captureBuilder.build(), captureListener, null);
+                                session.capture(captureBuilder.build(), null, null);
                             } catch (CameraAccessException e) {
                                 Log.e(LOG_TAG, " exception occurred while accessing " + frontCamera.getId(), e);
                             }
@@ -204,6 +204,7 @@ public class CameraHandler {
         ORIENTATIONS.append(Surface.ROTATION_270, 0);
         return ORIENTATIONS.get(rotation);
     }
+
 
 
 
