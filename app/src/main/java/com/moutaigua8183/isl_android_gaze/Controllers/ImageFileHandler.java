@@ -1,17 +1,17 @@
 package com.moutaigua8183.isl_android_gaze.Controllers;
 
+import android.graphics.ImageFormat;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Environment;
 import android.util.Log;
+import android.util.Size;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.text.DateFormat;
-import java.util.Date;
 
 /**
  * Created by Mou on 9/12/2017.
@@ -25,7 +25,7 @@ public class ImageFileHandler {
     private int imageHeight;
     private int imageFormat;
     private int maxImages;
-    private byte[] imageBytes;
+    private String imageName;
 
     public ImageFileHandler(){
         imageReader = null;
@@ -33,7 +33,7 @@ public class ImageFileHandler {
         imageWidth = -1;
         imageFormat = -1;
         maxImages = 1;
-        imageBytes = null;
+        imageName = "";
     }
 
     public ImageFileHandler(int width, int height, int format, int _maxImages) {
@@ -41,7 +41,7 @@ public class ImageFileHandler {
         imageHeight = height;
         imageFormat = format;
         maxImages = _maxImages;
-        imageBytes = null;
+        imageName = "";
         imageReader = ImageReader.newInstance(imageWidth, imageHeight, imageFormat, maxImages);
     }
 
@@ -54,10 +54,12 @@ public class ImageFileHandler {
                 public void onImageAvailable(ImageReader reader) {
                     Image image = reader.acquireLatestImage();
                     ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                    imageBytes = new byte[buffer.capacity()];
+                    byte[] imageBytes = new byte[buffer.capacity()];
                     buffer.get(imageBytes);
-                    saveImageByteIntoFile(imageBytes);
+                    saveImageByteIntoFile(imageBytes, imageName);
+                    Log.d(LOG_TAG, "taken");
                     image.close();
+                    imageName = null;
                 }
             };
             imageReader.setOnImageAvailableListener(onImageAvailableListener, null);
@@ -71,16 +73,29 @@ public class ImageFileHandler {
         return imageReader;
     }
 
-    private void saveImageByteIntoFile(byte[] imageData){
-        String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
+
+    public void saveImageByteIntoFile(byte[] imageData, String file_name){
+        if(file_name==null || file_name.isEmpty()){
+            Log.d(LOG_TAG, "Invalid filename. Image is not saved");
+            return;
+        }
         File picFolderRoot = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "Data");
+                Environment.DIRECTORY_PICTURES), "Android_Gaze_Data");
         if (!picFolderRoot.exists()){
             if (!picFolderRoot.mkdirs()){
                 Log.d("App", "failed to create directory");
             }
         }
-        File picFile = new File(picFolderRoot.getPath() + File.separator + currentDateTimeString + ".jpg");
+        String file_name_sufix;
+        switch (this.imageFormat){
+            case ImageFormat.JPEG:
+                file_name_sufix = ".jpg";
+                break;
+            default:
+                file_name_sufix = ".jpg";
+                break;
+        }
+        File picFile = new File(picFolderRoot.getPath() + File.separator + file_name + file_name_sufix);
         try {
             OutputStream output = new FileOutputStream(picFile);
             output.write(imageData);
@@ -90,29 +105,16 @@ public class ImageFileHandler {
         }
     }
 
-
-
-    public int getImageWidth() {
-        return imageWidth;
-    }
-
-    public void setImageWidth(int imageWidth) {
-        this.imageWidth = imageWidth;
-    }
-
-    public int getImageHeight() {
-        return imageHeight;
-    }
-
-    public void setImageHeight(int imageHeight) {
-        this.imageHeight = imageHeight;
-    }
-
-    public int getImageFormat() {
-        return imageFormat;
+    public void setImageSize(Size[] size){
+        imageWidth = null!=size ? size[0].getWidth() : 640 ;
+        imageHeight = null!=size ? size[0].getHeight() : 480 ;
     }
 
     public void setImageFormat(int imageFormat) {
         this.imageFormat = imageFormat;
+    }
+
+    public void setImageName(String image_name) {
+        this.imageName = image_name;
     }
 }

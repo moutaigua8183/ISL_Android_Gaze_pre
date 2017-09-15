@@ -9,6 +9,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.util.Size;
 import android.view.View;
 import android.widget.Button;
@@ -24,7 +25,6 @@ public class MainActivity extends AppCompatActivity {
     public static final int MY_PERMISSIONS_REQUEST_ACCESS_CODE = 1;
 
     CameraHandler cameraHandler;
-    ImageFileHandler imageFileHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,19 +39,12 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-        imageFileHandler = new ImageFileHandler();
-        imageFileHandler.setImageFormat(ImageFormat.JPEG);
-        Size[] imageSize = cameraHandler.getFrontCameraPictureSize(ImageFormat.JPEG);
-        imageFileHandler.setImageWidth( null!=imageSize ? imageSize[0].getWidth() : 640 );
-        imageFileHandler.setImageHeight( null!=imageSize ? imageSize[0].getHeight() : 480 );
-        imageFileHandler.instantiateImageReader();
-
-
         Button  btn = (Button) findViewById(R.id.button);
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                cameraHandler.takePicture( imageFileHandler.getImageReader() );
+                Log.d("Image_File_Handler", "pressed");
+                cameraHandler.takePicture("test");
             }
         });
 

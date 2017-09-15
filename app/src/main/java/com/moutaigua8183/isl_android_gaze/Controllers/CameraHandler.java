@@ -13,12 +13,10 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.ImageReader;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.content.PermissionChecker;
-import android.support.v4.content.pm.ActivityInfoCompat;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -35,10 +33,12 @@ import java.util.List;
 public class CameraHandler {
 
     private final String LOG_TAG = "Camera_Handler";
+    private final int IMAGE_FORMAT = ImageFormat.JPEG;      //if changed, modify capureBuilder.set(Orientation, ) accordingly
 
     private static CameraHandler myInstance;
     private Context ctxt;
     private CameraManager cameraManager;
+    private ImageFileHandler imageFileHandler;
     private CameraDevice frontCamera;
     private StreamConfigurationMap frontCameraStreamConfigurationMap;
     private CameraDevice.StateCallback stateCallback;
@@ -47,19 +47,26 @@ public class CameraHandler {
     private CameraHandler(Context context) {
         this.ctxt = context;
         cameraManager = (CameraManager) ctxt.getSystemService(Context.CAMERA_SERVICE);
+        imageFileHandler = new ImageFileHandler();
         frontCamera = null;
         frontCameraStreamConfigurationMap = null;
         stateCallback = new CameraDevice.StateCallback() {
             @Override
             public void onOpened(@NonNull CameraDevice camera) {
+                //when camera is open, initilize imageFileHandler for saving the pic
                 Log.d(LOG_TAG, "Camera " + camera.getId() + " is opened");
                 frontCamera = camera;
+                initFrontCameraStreamConfigurationMap();
+                imageFileHandler.setImageFormat(IMAGE_FORMAT);
+                imageFileHandler.setImageSize( getFrontCameraPictureSize(IMAGE_FORMAT) );
+                imageFileHandler.instantiateImageReader();
             }
 
             @Override
             public void onClosed(@NonNull CameraDevice camera) {
                 Log.d(LOG_TAG, "Camera " + camera.getId() + " is closed");
                 frontCamera = null;
+                frontCameraStreamConfigurationMap = null;
             }
 
             @Override
@@ -67,12 +74,14 @@ public class CameraHandler {
                 Log.d(LOG_TAG, "Camera " + camera.getId() + " is disconnected");
                 camera.close();
                 frontCamera = null;
+                frontCameraStreamConfigurationMap = null;
             }
 
             @Override
             public void onError(@NonNull CameraDevice camera, int error) {
                 Log.d(LOG_TAG, "Camera " + camera.getId() + " can\'t be opened with the error number " + error);
-                camera = null;
+                frontCamera = null;
+                frontCameraStreamConfigurationMap = null;
             }
         };
     }
@@ -95,7 +104,6 @@ public class CameraHandler {
                 if (this.ctxt.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
                         && this.ctxt.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     this.cameraManager.openCamera(frontCameraId, this.stateCallback, new Handler());
-                    initFrontCameraStreamConfigurationMap();
                 } else {
                     Log.d(LOG_TAG, "Can\'t open camera because of no permission");
                     Toast.makeText(this.ctxt, "Can't open camera because of no permission", Toast.LENGTH_SHORT);
@@ -104,7 +112,6 @@ public class CameraHandler {
                 if ( PermissionChecker.checkCallingOrSelfPermission(this.ctxt, Manifest.permission.CAMERA)== PackageManager.PERMISSION_GRANTED
                         && PermissionChecker.checkCallingOrSelfPermission(this.ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     this.cameraManager.openCamera(frontCameraId, this.stateCallback, null);
-                    initFrontCameraStreamConfigurationMap();
                 } else {
                     Log.d(LOG_TAG, "Can\'t open camera because of no permission");
                     Toast.makeText(this.ctxt, "Can't open camera because of no permission", Toast.LENGTH_SHORT);
@@ -124,21 +131,25 @@ public class CameraHandler {
         }
     }
 
-    public void takePicture(@NonNull ImageReader imageReader){
+    public void takePicture(String pic_name){
         if ( null==frontCamera) {
-            Log.e(LOG_TAG, "No front camera");
+            Log.d(LOG_TAG, "No front camera");
             return;
         }
+        if ( null==imageFileHandler.getImageReader() ) {
+            Log.d(LOG_TAG, "ImageReader is not ready, can\'t take picture.");
+            return;
+        }
+        if ( null==pic_name || pic_name.isEmpty() ){
+            Log.d(LOG_TAG, "Invalid filename. Image is not saved");
+            return;
+        }
+        imageFileHandler.setImageName(pic_name);
         try {
-//            Size[] imageSize = frontCameraStreamConfigurationMap.getOutputSizes(imageFormat);
-//            final boolean jpegSizesNotEmpty = imageSize != null && 0 < imageSize.length;
-//            int width = jpegSizesNotEmpty ? imageSize[0].getWidth() : 640;
-//            int height = jpegSizesNotEmpty ? imageSize[0].getHeight() : 480;
-            //final ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 1);
             final List<Surface> outputSurfaces = new ArrayList<>();
-            outputSurfaces.add(imageReader.getSurface());
+            outputSurfaces.add(imageFileHandler.getImageReader().getSurface());
             final CaptureRequest.Builder captureBuilder = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            captureBuilder.addTarget(imageReader.getSurface());
+            captureBuilder.addTarget(imageFileHandler.getImageReader().getSurface());
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_HDR);
@@ -163,9 +174,7 @@ public class CameraHandler {
         }
     }
 
-    public Size[] getFrontCameraPictureSize(int format){
-        return frontCameraStreamConfigurationMap.getOutputSizes(format);
-    }
+
 
 
     private String getFrontCameraId(){
@@ -193,6 +202,10 @@ public class CameraHandler {
             Log.d(LOG_TAG, "Fail to get front camera StreamConfigurationMap");
             e.printStackTrace();
         }
+    }
+
+    private Size[] getFrontCameraPictureSize(int format){
+        return frontCameraStreamConfigurationMap.getOutputSizes(format);
     }
 
     private int getOrientation(){
