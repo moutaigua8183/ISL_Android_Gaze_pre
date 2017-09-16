@@ -176,7 +176,6 @@ public class CameraHandler {
 
 
 
-
     private String getFrontCameraId(){
         String frontCameraId = "unknown";
         try {

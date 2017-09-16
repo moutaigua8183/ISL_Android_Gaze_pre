@@ -106,8 +106,10 @@ public class ImageFileHandler {
     }
 
     public void setImageSize(Size[] size){
-        imageWidth = null!=size ? size[0].getWidth() : 640 ;
-        imageHeight = null!=size ? size[0].getHeight() : 480 ;
+//        imageWidth = null!=size ? size[0].getWidth() : 640 ;
+//        imageHeight = null!=size ? size[0].getHeight() : 480 ;
+        imageWidth = 640 ;
+        imageHeight = 480 ;
     }
 
     public void setImageFormat(int imageFormat) {
