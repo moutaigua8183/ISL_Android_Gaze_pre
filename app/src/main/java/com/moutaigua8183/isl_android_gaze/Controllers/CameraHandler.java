@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Camera;
 import android.graphics.ImageFormat;
 import android.graphics.Point;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -17,16 +18,21 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
 import android.os.Handler;
+import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.v4.content.PermissionChecker;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
+import android.view.TextureView;
 import android.widget.Toast;
+
+import com.moutaigua8183.isl_android_gaze.R;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -47,10 +53,6 @@ public class CameraHandler {
     private CameraDevice frontCamera;
     private StreamConfigurationMap frontCameraStreamConfigurationMap;
     private CameraDevice.StateCallback stateCallback;
-    // preview
-    private Camera camera;
-    private boolean isPreview = false;
-    private boolean isConfigured = false;
 
 
     // private constructor
@@ -188,9 +190,10 @@ public class CameraHandler {
         imageFileHandler.setSavingCallback(savingCallback);
     }
 
-    public void deteleLastPicture(){
+    public void deleteLastPicture(){
         this.imageFileHandler.deleteLastImage();
     }
+
 
 
 
@@ -234,6 +237,7 @@ public class CameraHandler {
         ORIENTATIONS.append(Surface.ROTATION_270, 0);
         return ORIENTATIONS.get(rotation);
     }
+
 
 
 

@@ -1,6 +1,5 @@
 package com.moutaigua8183.isl_android_gaze.Activities;
 
-import android.graphics.Point;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
@@ -18,9 +17,6 @@ import com.moutaigua8183.isl_android_gaze.Controllers.DotController;
 import com.moutaigua8183.isl_android_gaze.Controllers.ImageFileHandler;
 import com.moutaigua8183.isl_android_gaze.R;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 /**
  * Created by mou on 9/16/17.
  */
@@ -34,7 +30,7 @@ public class DataCollectionActivity extends AppCompatActivity {
     private CameraHandler cameraHandler;
     private DotController dotController;
     private int[] SCREEN_SIZE;
-    private boolean isPicSaved;
+    private boolean isPicSaved = false;
 
 
     @Override
@@ -42,10 +38,6 @@ public class DataCollectionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_data_collect);
         getSupportActionBar().hide();
-
-
-
-        isPicSaved = false;
 
         dotHolderLayout = findViewById(R.id.activity_data_collection_layout_dotHolder);
         dotHolderLayout.setOnTouchListener(new View.OnTouchListener() {
@@ -60,7 +52,7 @@ public class DataCollectionActivity extends AppCompatActivity {
                     if( is_click_on_left && dotController.getCurrPointType()!=DotController.POINT_TYPE_LEFT
                             || !is_click_on_left && dotController.getCurrPointType()!=DotController.POINT_TYPE_RIGHT ) {
                         // invalid picture
-                        cameraHandler.deteleLastPicture();
+                        cameraHandler.deleteLastPicture();
                         Log.d(LOG_TAG, "Invalid Picture");
                     }
                     dotController.showNext();
@@ -98,7 +90,7 @@ public class DataCollectionActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         if( isPicSaved ){
-            cameraHandler.deteleLastPicture();
+            cameraHandler.deleteLastPicture();
         }
         finish();
     }
@@ -106,7 +98,7 @@ public class DataCollectionActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        cameraHandler.deteleLastPicture();
+        cameraHandler.deleteLastPicture();
         cameraHandler.closeFrontCamera();
     }
 
@@ -150,35 +142,5 @@ public class DataCollectionActivity extends AppCompatActivity {
         }, delayLength);
     }
 
-    private void startPreview(){
-        SurfaceView cameraSurface = (SurfaceView)findViewById(R.id.activity_data_collection_surface);
-        cameraSurface.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-            }
-        });
-        SurfaceHolder holder = cameraSurface.getHolder();
-        holder.addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-
-            }
-        });
-    }
-
-    private void iniPreview(int width, int height){
-
-    }
 
 }
