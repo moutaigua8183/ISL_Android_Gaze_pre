@@ -26,7 +26,15 @@ public class ImageFileHandler {
     private int imageFormat;
     private int maxImages;
     private String imageName;
+    private SavingCallback savingCallback;
 
+    // interface for operations after pictures are saved
+    public interface SavingCallback{
+        void onSaved();
+    }
+
+
+    // default constructor
     public ImageFileHandler(){
         imageReader = null;
         imageHeight = -1;
@@ -34,6 +42,7 @@ public class ImageFileHandler {
         imageFormat = -1;
         maxImages = 1;
         imageName = "";
+        savingCallback = null;
     }
 
     public ImageFileHandler(int width, int height, int format, int _maxImages) {
@@ -42,6 +51,7 @@ public class ImageFileHandler {
         imageFormat = format;
         maxImages = _maxImages;
         imageName = "";
+        savingCallback = null;
         imageReader = ImageReader.newInstance(imageWidth, imageHeight, imageFormat, maxImages);
     }
 
@@ -60,6 +70,9 @@ public class ImageFileHandler {
                     Log.d(LOG_TAG, "taken");
                     image.close();
                     imageName = null;
+                    if( null!=savingCallback ){
+                        savingCallback.onSaved();
+                    }
                 }
             };
             imageReader.setOnImageAvailableListener(onImageAvailableListener, null);
@@ -71,6 +84,10 @@ public class ImageFileHandler {
             Log.d(LOG_TAG, "ImageReader is not instantiated");
         }
         return imageReader;
+    }
+
+    public void setSavingCallback(SavingCallback _savingCallback){
+        this.savingCallback = _savingCallback;
     }
 
 

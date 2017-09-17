@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">ISL_Android_Gaze</string>
+
+    <string name="main_activity_txt_title">ISL\nMobile Gaze Tracking</string>
+    <string name="main_activity_btn_data_collection">Data Collection</string>
+    <string name="main_activity_btn_exit">Exit</string>
 </resources>

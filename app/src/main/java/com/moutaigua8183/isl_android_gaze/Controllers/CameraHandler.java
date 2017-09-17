@@ -43,6 +43,7 @@ public class CameraHandler {
     private StreamConfigurationMap frontCameraStreamConfigurationMap;
     private CameraDevice.StateCallback stateCallback;
 
+
     // private constructor
     private CameraHandler(Context context) {
         this.ctxt = context;
@@ -172,6 +173,10 @@ public class CameraHandler {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    public void setSavingCallback(ImageFileHandler.SavingCallback savingCallback){
+        imageFileHandler.setSavingCallback(savingCallback);
     }
 
 
