@@ -179,6 +179,10 @@ public class CameraHandler {
         imageFileHandler.setSavingCallback(savingCallback);
     }
 
+    public void deteleLastPicture(){
+        this.imageFileHandler.deleteLastImage();
+    }
+
 
 
     private String getFrontCameraId(){

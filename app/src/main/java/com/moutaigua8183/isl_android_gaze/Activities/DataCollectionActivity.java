@@ -32,6 +32,7 @@ public class DataCollectionActivity extends AppCompatActivity {
     private CameraHandler cameraHandler;
     private DotController dotController;
     private int[] SCREEN_SIZE;
+    private boolean isPicSaved;
 
 
     @Override
@@ -40,18 +41,27 @@ public class DataCollectionActivity extends AppCompatActivity {
         setContentView(R.layout.activity_data_collect);
         getSupportActionBar().hide();
 
+        isPicSaved = false;
+
         dotHolderLayout = findViewById(R.id.activity_data_collection_layout_dotHolder);
         dotHolderLayout.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
+                if( !isPicSaved ){
+                    return true;
+                }
                 if (motionEvent.getAction() == MotionEvent.ACTION_UP){
                     Log.d(LOG_TAG, "pressed");
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyMMddhhmmss");
-                    String timestamp = sdf.format(new Date());
-                    Point curPoint = dotController.getCurrPoint();
-                    String picName = timestamp + "_" + curPoint.x + "_" + curPoint.y;
-                    cameraHandler.takePicture(picName);
-                    Log.d(LOG_TAG, picName);
+                    boolean is_click_on_left = motionEvent.getRawX() <= (SCREEN_SIZE[0]/2);
+                    if( is_click_on_left && dotController.getCurrPointType()!=DotController.POINT_TYPE_LEFT
+                            || !is_click_on_left && dotController.getCurrPointType()!=DotController.POINT_TYPE_RIGHT ) {
+                        // invalid picture
+                        cameraHandler.deteleLastPicture();
+                        Log.d(LOG_TAG, "Invalid Picture");
+                    }
+                    dotController.showNext();
+                    delayCapture(400);
+                    isPicSaved = false;     // reset the status
                 }
                 return true;
             }
@@ -62,7 +72,7 @@ public class DataCollectionActivity extends AppCompatActivity {
         cameraHandler.setSavingCallback(new ImageFileHandler.SavingCallback() {
             @Override
             public void onSaved() {
-                dotController.showNext();
+                isPicSaved = true;
             }
         });
 
@@ -70,6 +80,7 @@ public class DataCollectionActivity extends AppCompatActivity {
         dotController = new DotController(this, SCREEN_SIZE);
         dotController.setDotHolderLayout((FrameLayout)dotHolderLayout);
         dotController.showNext();
+        delayCapture(400);
 
 
 
@@ -128,6 +139,21 @@ public class DataCollectionActivity extends AppCompatActivity {
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         return new int[]{displayMetrics.heightPixels, displayMetrics.widthPixels};
+    }
+
+    private void delayCapture(int delayLength){
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmss");
+                String timestamp = sdf.format(new Date());
+                Point curPoint = dotController.getCurrPoint();
+                String picName = timestamp + "_" + curPoint.x + "_" + curPoint.y;
+                cameraHandler.takePicture(picName);
+                Log.d(LOG_TAG, picName);
+            }
+        }, delayLength);
     }
 
 }

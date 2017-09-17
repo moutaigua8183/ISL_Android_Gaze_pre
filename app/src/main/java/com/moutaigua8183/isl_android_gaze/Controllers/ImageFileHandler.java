@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 public class ImageFileHandler {
 
     private final String LOG_TAG = "Image_File_Handler";
+    private final String FOLDER_NAME = "Android_Gaze_Data";
     private ImageReader imageReader;
     private int imageWidth;
     private int imageHeight;
@@ -90,14 +91,13 @@ public class ImageFileHandler {
         this.savingCallback = _savingCallback;
     }
 
-
     public void saveImageByteIntoFile(byte[] imageData, String file_name){
         if(file_name==null || file_name.isEmpty()){
             Log.d(LOG_TAG, "Invalid filename. Image is not saved");
             return;
         }
         File picFolderRoot = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "Android_Gaze_Data");
+                Environment.DIRECTORY_PICTURES), FOLDER_NAME);
         if (!picFolderRoot.exists()){
             if (!picFolderRoot.mkdirs()){
                 Log.d("App", "failed to create directory");
@@ -135,5 +135,25 @@ public class ImageFileHandler {
 
     public void setImageName(String image_name) {
         this.imageName = image_name;
+    }
+
+    public void deleteLastImage(){
+        File picFolderRoot = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES), FOLDER_NAME);
+        String file_name_sufix;
+        switch (this.imageFormat){
+            case ImageFormat.JPEG:
+                file_name_sufix = ".jpg";
+                break;
+            default:
+                file_name_sufix = ".jpg";
+                break;
+        }
+        File picFile = new File(picFolderRoot.getPath() + File.separator + imageName + file_name_sufix);
+        if( picFile.exists() ){
+            if( picFile.delete() ){
+                Log.d(LOG_TAG, "Image " + imageName + " is deleted");
+            }
+        }
     }
 }
