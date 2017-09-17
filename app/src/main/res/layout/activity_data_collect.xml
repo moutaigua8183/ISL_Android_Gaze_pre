@@ -7,6 +7,12 @@
     tools:context="com.moutaigua8183.isl_android_gaze.Activities.MainActivity">
 
 
+    <SurfaceView
+        android:id="@+id/activity_data_collection_surface"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center" />
+
     <!--<Button-->
         <!--android:id="@+id/button"-->
         <!--android:layout_width="wrap_content"-->

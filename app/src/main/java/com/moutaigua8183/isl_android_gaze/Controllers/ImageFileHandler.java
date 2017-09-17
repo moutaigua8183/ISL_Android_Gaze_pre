@@ -70,7 +70,6 @@ public class ImageFileHandler {
                     saveImageByteIntoFile(imageBytes, imageName);
                     Log.d(LOG_TAG, "taken");
                     image.close();
-                    imageName = null;
                     if( null!=savingCallback ){
                         savingCallback.onSaved();
                     }
@@ -156,4 +155,6 @@ public class ImageFileHandler {
             }
         }
     }
+
+
 }

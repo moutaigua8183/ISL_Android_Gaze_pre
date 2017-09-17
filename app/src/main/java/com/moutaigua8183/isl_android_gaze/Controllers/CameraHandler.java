@@ -4,7 +4,9 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Camera;
 import android.graphics.ImageFormat;
+import android.graphics.Point;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -23,7 +25,9 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -37,11 +41,16 @@ public class CameraHandler {
 
     private static CameraHandler myInstance;
     private Context ctxt;
+    // background capture
     private CameraManager cameraManager;
     private ImageFileHandler imageFileHandler;
     private CameraDevice frontCamera;
     private StreamConfigurationMap frontCameraStreamConfigurationMap;
     private CameraDevice.StateCallback stateCallback;
+    // preview
+    private Camera camera;
+    private boolean isPreview = false;
+    private boolean isConfigured = false;
 
 
     // private constructor
@@ -132,7 +141,7 @@ public class CameraHandler {
         }
     }
 
-    public void takePicture(String pic_name){
+    public void takePicture(Point point){
         if ( null==frontCamera) {
             Log.d(LOG_TAG, "No front camera");
             return;
@@ -141,11 +150,11 @@ public class CameraHandler {
             Log.d(LOG_TAG, "ImageReader is not ready, can\'t take picture.");
             return;
         }
-        if ( null==pic_name || pic_name.isEmpty() ){
-            Log.d(LOG_TAG, "Invalid filename. Image is not saved");
-            return;
-        }
-        imageFileHandler.setImageName(pic_name);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+        String timestamp = sdf.format(new Date());
+        String picName = timestamp + "_" + point.x + "_" + point.y;
+        Log.d(LOG_TAG, picName);
+        imageFileHandler.setImageName(picName);
         try {
             final List<Surface> outputSurfaces = new ArrayList<>();
             outputSurfaces.add(imageFileHandler.getImageReader().getSurface());

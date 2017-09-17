@@ -7,6 +7,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.Toast;
@@ -40,6 +42,8 @@ public class DataCollectionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_data_collect);
         getSupportActionBar().hide();
+
+
 
         isPicSaved = false;
 
@@ -82,42 +86,39 @@ public class DataCollectionActivity extends AppCompatActivity {
         dotController.showNext();
         delayCapture(400);
 
-
-
-//        Button  btn = (Button) findViewById(R.id.button);
-//        btn.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                Log.d(LOG_TAG, "pressed");
-//                SimpleDateFormat sdf = new SimpleDateFormat("yyyMMddhhmmss");
-//                String timestamp = sdf.format(new Date());
-//                Point curPoint = dotController.getCurrPoint();
-//                String picName = timestamp + "_" + curPoint.x + "_" + curPoint.y;
-//                cameraHandler.takePicture(picName);
-//                Log.d(LOG_TAG, picName);
-//            }
-//        });
-
-    }
-
-
-
-
-
-
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        cameraHandler.closeFrontCamera();
     }
 
 
     /**
-     * Press Back twice to exit
+     * When the collection encounter interference,
+     * delete the last picture and exit the DataCollection
+     * activity to guarantee the quality of training data
+     */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if( isPicSaved ){
+            cameraHandler.deteleLastPicture();
+        }
+        finish();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        cameraHandler.deteleLastPicture();
+        cameraHandler.closeFrontCamera();
+    }
+
+    /**
+     * Press Back twice to exit unless a picture is being
+     * saved. If so, try again after the picture is saved
      */
     @Override
     public void onBackPressed() {
+        if( !isPicSaved ){
+            return;
+        }
         if (doubleBackToExitPressedOnce) {
             super.onBackPressed();
             return;
@@ -133,8 +134,6 @@ public class DataCollectionActivity extends AppCompatActivity {
     }
 
 
-
-
     private int[] fetchScreenSize(){
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -146,14 +145,40 @@ public class DataCollectionActivity extends AppCompatActivity {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmss");
-                String timestamp = sdf.format(new Date());
-                Point curPoint = dotController.getCurrPoint();
-                String picName = timestamp + "_" + curPoint.x + "_" + curPoint.y;
-                cameraHandler.takePicture(picName);
-                Log.d(LOG_TAG, picName);
+                cameraHandler.takePicture(dotController.getCurrPoint());
             }
         }, delayLength);
+    }
+
+    private void startPreview(){
+        SurfaceView cameraSurface = (SurfaceView)findViewById(R.id.activity_data_collection_surface);
+        cameraSurface.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
+        SurfaceHolder holder = cameraSurface.getHolder();
+        holder.addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+
+            }
+        });
+    }
+
+    private void iniPreview(int width, int height){
+
     }
 
 }
