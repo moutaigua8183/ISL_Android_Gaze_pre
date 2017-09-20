@@ -15,11 +15,14 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.PermissionChecker;
 import android.util.Log;
 import android.util.Size;
@@ -33,8 +36,12 @@ import com.moutaigua8183.isl_android_gaze.R;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Mou on 9/12/2017.
@@ -42,8 +49,12 @@ import java.util.List;
 
 public class CameraHandler {
 
+    public final int STATUS_NONE = -1;
+    public final int STATUS_PREVIEW = 1;
+    public final int STATUS_DATA_COLLECTING = 2;
     private final String LOG_TAG = "Camera_Handler";
     private final int IMAGE_FORMAT = ImageFormat.JPEG;      //if changed, modify capureBuilder.set(Orientation, ) accordingly
+
 
     private static CameraHandler myInstance;
     private Context ctxt;
@@ -53,7 +64,8 @@ public class CameraHandler {
     private CameraDevice frontCamera;
     private StreamConfigurationMap frontCameraStreamConfigurationMap;
     private CameraDevice.StateCallback stateCallback;
-
+    private CaptureRequest.Builder  captureBuilder;
+    private int status;
 
     // private constructor
     private CameraHandler(Context context) {
@@ -67,10 +79,11 @@ public class CameraHandler {
             public void onOpened(@NonNull CameraDevice camera) {
                 //when camera is open, initilize imageFileHandler for saving the pic
                 Log.d(LOG_TAG, "Camera " + camera.getId() + " is opened");
+                status = STATUS_DATA_COLLECTING;
                 frontCamera = camera;
                 initFrontCameraStreamConfigurationMap();
                 imageFileHandler.setImageFormat(IMAGE_FORMAT);
-                imageFileHandler.setImageSize( getFrontCameraPictureSize(IMAGE_FORMAT) );
+                imageFileHandler.setImageSize(getFrontCameraPictureSize(IMAGE_FORMAT));
                 imageFileHandler.instantiateImageReader();
             }
 
@@ -79,6 +92,7 @@ public class CameraHandler {
                 Log.d(LOG_TAG, "Camera " + camera.getId() + " is closed");
                 frontCamera = null;
                 frontCameraStreamConfigurationMap = null;
+                status = STATUS_NONE;
             }
 
             @Override
@@ -87,6 +101,7 @@ public class CameraHandler {
                 camera.close();
                 frontCamera = null;
                 frontCameraStreamConfigurationMap = null;
+                status = STATUS_NONE;
             }
 
             @Override
@@ -94,25 +109,26 @@ public class CameraHandler {
                 Log.d(LOG_TAG, "Camera " + camera.getId() + " can\'t be opened with the error number " + error);
                 frontCamera = null;
                 frontCameraStreamConfigurationMap = null;
+                status = STATUS_NONE;
             }
         };
+        status = STATUS_NONE;
     }
 
     // to create a CameraHandler Singleton
-    public static synchronized CameraHandler getInstance(Context context){
-        if( null==myInstance ){
+    public static synchronized CameraHandler getInstance(Context context) {
+        if (null == myInstance) {
             myInstance = new CameraHandler(context);
         }
         return myInstance;
     }
 
 
-
-    public void openFrontCamera(){
+    public void openFrontCamera() {
         Log.d(LOG_TAG, "Try to open local camera");
         try {
             String frontCameraId = getFrontCameraId();
-            if(Build.VERSION.SDK_INT > 22) {
+            if (Build.VERSION.SDK_INT > 22) {
                 if (this.ctxt.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
                         && this.ctxt.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     this.cameraManager.openCamera(frontCameraId, this.stateCallback, new Handler());
@@ -121,7 +137,7 @@ public class CameraHandler {
                     Toast.makeText(this.ctxt, "Can't open camera because of no permission", Toast.LENGTH_SHORT);
                 }
             } else {
-                if ( PermissionChecker.checkCallingOrSelfPermission(this.ctxt, Manifest.permission.CAMERA)== PackageManager.PERMISSION_GRANTED
+                if (PermissionChecker.checkCallingOrSelfPermission(this.ctxt, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
                         && PermissionChecker.checkCallingOrSelfPermission(this.ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     this.cameraManager.openCamera(frontCameraId, this.stateCallback, null);
                 } else {
@@ -134,21 +150,21 @@ public class CameraHandler {
         }
     }
 
-    public void closeFrontCamera(){
+    public void closeFrontCamera() {
         Log.d(LOG_TAG, "Try to close front camera");
-        if( null!=frontCamera ){
+        if (null != frontCamera) {
             frontCamera.close();
             Log.d(LOG_TAG, "Camera " + frontCamera.getId() + " is closed");
             frontCamera = null;
         }
     }
 
-    public void takePicture(Point point){
-        if ( null==frontCamera) {
+    public void takePicture(Point point) {
+        if (null == frontCamera) {
             Log.d(LOG_TAG, "No front camera");
             return;
         }
-        if ( null==imageFileHandler.getImageReader() ) {
+        if (null == imageFileHandler.getImageReader()) {
             Log.d(LOG_TAG, "ImageReader is not ready, can\'t take picture.");
             return;
         }
@@ -160,10 +176,12 @@ public class CameraHandler {
         try {
             final List<Surface> outputSurfaces = new ArrayList<>();
             outputSurfaces.add(imageFileHandler.getImageReader().getSurface());
-            final CaptureRequest.Builder captureBuilder = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(imageFileHandler.getImageReader().getSurface());
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
+            captureBuilder.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CameraMetadata.CONTROL_AE_ANTIBANDING_MODE_60HZ);
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_HDR);
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
             frontCamera.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
@@ -186,35 +204,33 @@ public class CameraHandler {
         }
     }
 
-    public void setSavingCallback(ImageFileHandler.SavingCallback savingCallback){
+    public void setSavingCallback(ImageFileHandler.SavingCallback savingCallback) {
         imageFileHandler.setSavingCallback(savingCallback);
     }
 
-    public void deleteLastPicture(){
+    public void deleteLastPicture() {
         this.imageFileHandler.deleteLastImage();
     }
 
 
-
-
-    private String getFrontCameraId(){
+    private String getFrontCameraId() {
         String frontCameraId = "unknown";
         try {
-            for(final String cameraId : cameraManager.getCameraIdList() ){
+            for (final String cameraId : cameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
                 int cameraOrientation = characteristics.get(CameraCharacteristics.LENS_FACING);
-                if( cameraOrientation==CameraCharacteristics.LENS_FACING_FRONT ){
+                if (cameraOrientation == CameraCharacteristics.LENS_FACING_FRONT) {
                     frontCameraId = cameraId;
                 }
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        Log.d( LOG_TAG, "Front camera ID: " + frontCameraId );
+        Log.d(LOG_TAG, "Front camera ID: " + frontCameraId);
         return frontCameraId;
     }
 
-    private void initFrontCameraStreamConfigurationMap(){
+    private void initFrontCameraStreamConfigurationMap() {
         try {
             CameraCharacteristics characteristics = this.cameraManager.getCameraCharacteristics(frontCamera.getId());
             frontCameraStreamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
@@ -224,12 +240,12 @@ public class CameraHandler {
         }
     }
 
-    private Size[] getFrontCameraPictureSize(int format){
+    private Size[] getFrontCameraPictureSize(int format) {
         return frontCameraStreamConfigurationMap.getOutputSizes(format);
     }
 
-    private int getOrientation(){
-        int rotation = ((Activity)this.ctxt).getWindowManager().getDefaultDisplay().getRotation();
+    private int getOrientation() {
+        int rotation = ((Activity) this.ctxt).getWindowManager().getDefaultDisplay().getRotation();
         SparseIntArray ORIENTATIONS = new SparseIntArray();
         ORIENTATIONS.append(Surface.ROTATION_0, 270);
         ORIENTATIONS.append(Surface.ROTATION_90, 180);
@@ -239,7 +255,185 @@ public class CameraHandler {
     }
 
 
+    /******************* Preview ********************/
 
+    private CameraManager   cameraManagerForPrev;
+    private TextureView     textureViewForPrev;
+    private SurfaceTexture  surfaceTextureForPrev;
+    private Size            imageSizeForPrev;
+    private Handler         handlerForPrev;
+    private CameraDevice    frontCameraForPrev;
+    private Semaphore       cameraOpenCloseLockForPrev = new Semaphore(1);
+    private CaptureRequest.Builder  captureBuilderForPrev;
+
+    public void startPreview(TextureView textureView) {
+        cameraManagerForPrev = (CameraManager) ((Activity) ctxt).getSystemService(Context.CAMERA_SERVICE);
+        textureViewForPrev = textureView;
+        textureViewForPrev.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                initCameraAndPreview(width, height);
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
+            }
+        });
+    }
+
+    public void stopPreview(){
+        Log.d(LOG_TAG, "Try to close front camera for preview");
+        try {
+            cameraOpenCloseLockForPrev.acquire();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            cameraOpenCloseLockForPrev.release();
+        }
+        if (null != frontCameraForPrev) {
+            frontCameraForPrev.close();
+            Log.d(LOG_TAG, "Camera " + frontCameraForPrev.getId() + " is closed");
+            frontCamera = null;
+        }
+    }
+
+    private void initCameraAndPreview(int width, int height) {
+        Log.d(LOG_TAG, "init camera and preview");
+        HandlerThread handlerThread = new HandlerThread("Gaze_DataCollection_Preview");
+        handlerThread.start();
+        handlerForPrev = new Handler(handlerThread.getLooper());
+        try {
+            String frontCameraId = getFrontCameraId();
+            CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(frontCameraId);
+            StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            imageSizeForPrev = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+            if (ActivityCompat.checkSelfPermission((Activity)ctxt, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                Log.d(LOG_TAG, "No permission for local camera");
+                ((Activity) ctxt).finish();
+                return;
+            }
+            if( !cameraOpenCloseLockForPrev.tryAcquire(2500, TimeUnit.MICROSECONDS) ){
+                throw new RuntimeException("Time out waiting to lock opening");
+            }
+            cameraManagerForPrev.openCamera(frontCameraId, new CameraDevice.StateCallback() {
+
+                @Override
+                public void onOpened(CameraDevice camera) {
+                    Log.d(LOG_TAG,"Front camera is opened.");
+                    cameraOpenCloseLockForPrev.release();
+                    frontCameraForPrev = camera;
+                    createCameraCaptureSession();
+                    status = STATUS_PREVIEW;
+                }
+
+                @Override
+                public void onClosed(@NonNull CameraDevice camera) {
+                    super.onClosed(camera);
+                    frontCameraForPrev = null;
+                    status = STATUS_NONE;
+                }
+
+                @Override
+                public void onDisconnected(@NonNull CameraDevice camera) {
+                    status = STATUS_NONE;
+                }
+
+                @Override
+                public void onError(@NonNull CameraDevice camera, int error) {
+                    frontCameraForPrev = camera;
+                    status = STATUS_NONE;
+                }
+            }, handlerForPrev);
+        } catch (CameraAccessException e) {
+            Log.e(LOG_TAG, "open camera failed." + e.getMessage());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createCameraCaptureSession(){
+        Log.d(LOG_TAG,"createCameraCaptureSession");
+        try {
+            surfaceTextureForPrev = textureViewForPrev.getSurfaceTexture();
+            surfaceTextureForPrev.setDefaultBufferSize(imageSizeForPrev.getWidth(), imageSizeForPrev.getHeight());
+            Surface outputSurface = new Surface(surfaceTextureForPrev);
+            captureBuilderForPrev = frontCameraForPrev.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            captureBuilderForPrev.addTarget(outputSurface);
+            frontCameraForPrev.createCaptureSession(
+                    Arrays.asList(outputSurface),
+                    new CameraCaptureSession.StateCallback() {
+                                @Override
+                                public void onConfigured(CameraCaptureSession session) {
+                                    try {
+                                        captureBuilderForPrev.set(CaptureRequest.CONTROL_AF_MODE,
+                                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                                        captureBuilderForPrev.set(CaptureRequest.CONTROL_AE_MODE,
+                                                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+                                        session.setRepeatingRequest(captureBuilderForPrev.build(), sessionCaptureCallbackForPrev, handlerForPrev);
+                                        captureBuilderForPrev.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_FACE_PRIORITY);
+                                        captureBuilderForPrev.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, CameraMetadata.STATISTICS_FACE_DETECT_MODE_SIMPLE);
+                                        captureBuilderForPrev.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
+                                    } catch (CameraAccessException e) {
+                                        e.printStackTrace();
+                                        Log.e("linc","set preview builder failed."+e.getMessage());
+                                    }
+                                }
+
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                        }
+                    }, handlerForPrev);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private CameraCaptureSession.CaptureCallback sessionCaptureCallbackForPrev =
+            new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
+                                               TotalCaptureResult result) {
+
+                }
+            };
+
+    private Size getPreferredPreviewSize(Size[] mapSizes, int width, int height) {
+        List<Size> collectorSizes = new ArrayList<>();
+        for(Size option : mapSizes) {
+            if(width > height) {
+                if(option.getWidth() > width &&
+                        option.getHeight() > height) {
+                    collectorSizes.add(option);
+                }
+            } else {
+                if(option.getWidth() > height &&
+                        option.getHeight() > width) {
+                    collectorSizes.add(option);
+                }
+            }
+        }
+        if(collectorSizes.size() > 0) {
+            return Collections.min(collectorSizes, new Comparator<Size>() {
+                @Override
+                public int compare(Size lhs, Size rhs) {
+                    return Long.signum(lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight());
+                }
+            });
+        }
+        return mapSizes[0];
+    }
 
 
 
