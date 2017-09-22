@@ -13,6 +13,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import com.moutaigua8183.isl_android_gaze.Activities.DataCollectionActivity;
 import com.moutaigua8183.isl_android_gaze.Controllers.CameraHandler;
 import com.moutaigua8183.isl_android_gaze.Controllers.DotController;
 import com.moutaigua8183.isl_android_gaze.Controllers.ImageFileHandler;
@@ -72,7 +73,7 @@ public class FragmentDataCollect extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        cameraHandler = CameraHandler.getInstance(getActivity());
+        cameraHandler = CameraHandler.getInstance(getActivity(), DataCollectionActivity.Image_Size);
         cameraHandler.setSavingCallback(new ImageFileHandler.SavingCallback() {
             @Override
             public void onSaved() {

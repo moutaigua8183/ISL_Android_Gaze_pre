@@ -8,6 +8,7 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Size;
 import android.widget.Toast;
 
 import com.moutaigua8183.isl_android_gaze.Fragments.FragmentDataCollect;
@@ -20,12 +21,13 @@ import com.moutaigua8183.isl_android_gaze.R;
 
 public class DataCollectionActivity extends AppCompatActivity {
 
-
+    public static final Size    Image_Size = new Size(640, 480);
     private final String LOG_TAG = "DataCollectionActivity";
     private final String DOT_FRAGMENT_TAG = "DOT_FRAGMENT";
 
     private boolean doubleBackToExitPressedOnce = false;
     private FragmentManager     fragmentManager;
+
 
 
 

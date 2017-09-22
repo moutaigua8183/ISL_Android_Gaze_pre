@@ -12,6 +12,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Created by Mou on 9/12/2017.
@@ -102,6 +104,9 @@ public class ImageFileHandler {
                 Log.d("App", "failed to create directory");
             }
         }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
+        String timeDate = sdf.format(new Date());
+        String subFolderName = timeDate;
         String file_name_sufix;
         switch (this.imageFormat){
             case ImageFormat.JPEG:
@@ -111,7 +116,7 @@ public class ImageFileHandler {
                 file_name_sufix = ".jpg";
                 break;
         }
-        File picFile = new File(picFolderRoot.getPath() + File.separator + file_name + file_name_sufix);
+        File picFile = new File(picFolderRoot.getPath() + File.separator + subFolderName  + File.separator + file_name + file_name_sufix);
         try {
             OutputStream output = new FileOutputStream(picFile);
             output.write(imageData);
@@ -121,11 +126,9 @@ public class ImageFileHandler {
         }
     }
 
-    public void setImageSize(Size[] size){
-//        imageWidth = null!=size ? size[0].getWidth() : 640 ;
-//        imageHeight = null!=size ? size[0].getHeight() : 480 ;
-        imageWidth = 640 ;
-        imageHeight = 480 ;
+    public void setImageSize(Size size){
+        imageWidth = size.getWidth() ;
+        imageHeight = size.getHeight() ;
     }
 
     public void setImageFormat(int imageFormat) {

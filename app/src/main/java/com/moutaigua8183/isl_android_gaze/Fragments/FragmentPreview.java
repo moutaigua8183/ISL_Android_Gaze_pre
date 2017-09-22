@@ -8,7 +8,10 @@ import android.view.LayoutInflater;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
 
+import com.moutaigua8183.isl_android_gaze.Activities.DataCollectionActivity;
 import com.moutaigua8183.isl_android_gaze.Controllers.CameraHandler;
 import com.moutaigua8183.isl_android_gaze.R;
 
@@ -52,12 +55,20 @@ public class FragmentPreview extends Fragment {
                 }, 800);
             }
         });
+        textureView.setLayoutParams(
+                // switch the height and width deliberately for better preview effect,
+                // but finally the image will be saved in the correct ratio
+                new RelativeLayout.LayoutParams(
+                        DataCollectionActivity.Image_Size.getHeight(),
+                        DataCollectionActivity.Image_Size.getWidth()
+                )
+        );
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        cameraHandler = CameraHandler.getInstance(getActivity());
+        cameraHandler = CameraHandler.getInstance(getActivity(), DataCollectionActivity.Image_Size);
         cameraHandler.startPreview(textureView);
     }
 

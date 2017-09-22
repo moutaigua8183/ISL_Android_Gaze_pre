@@ -57,19 +57,22 @@ public class CameraHandler {
 
 
     private static CameraHandler myInstance;
-    private Context ctxt;
+    private Context         ctxt;
+    private CameraDevice    frontCamera;
+    private Size            IMAGE_SIZE;
+    private int             status;
     // background capture
     private CameraManager cameraManager;
     private ImageFileHandler imageFileHandler;
-    private CameraDevice frontCamera;
     private StreamConfigurationMap frontCameraStreamConfigurationMap;
     private CameraDevice.StateCallback stateCallback;
     private CaptureRequest.Builder  captureBuilder;
-    private int status;
+
 
     // private constructor
-    private CameraHandler(Context context) {
+    private CameraHandler(Context context, Size size) {
         this.ctxt = context;
+        IMAGE_SIZE =size;
         cameraManager = (CameraManager) ctxt.getSystemService(Context.CAMERA_SERVICE);
         imageFileHandler = new ImageFileHandler();
         frontCamera = null;
@@ -83,7 +86,7 @@ public class CameraHandler {
                 frontCamera = camera;
                 initFrontCameraStreamConfigurationMap();
                 imageFileHandler.setImageFormat(IMAGE_FORMAT);
-                imageFileHandler.setImageSize(getFrontCameraPictureSize(IMAGE_FORMAT));
+                imageFileHandler.setImageSize(IMAGE_SIZE);
                 imageFileHandler.instantiateImageReader();
             }
 
@@ -116,9 +119,9 @@ public class CameraHandler {
     }
 
     // to create a CameraHandler Singleton
-    public static synchronized CameraHandler getInstance(Context context) {
+    public static synchronized CameraHandler getInstance(Context context, Size size) {
         if (null == myInstance) {
-            myInstance = new CameraHandler(context);
+            myInstance = new CameraHandler(context, size);
         }
         return myInstance;
     }
@@ -272,7 +275,7 @@ public class CameraHandler {
         textureViewForPrev.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-                initCameraAndPreview(width, height);
+                initCameraAndPreview(IMAGE_SIZE.getWidth(), IMAGE_SIZE.getHeight());
             }
 
             @Override
@@ -403,36 +406,42 @@ public class CameraHandler {
     private CameraCaptureSession.CaptureCallback sessionCaptureCallbackForPrev =
             new CameraCaptureSession.CaptureCallback() {
                 @Override
-                public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, CaptureRequest request,
                                                TotalCaptureResult result) {
-
                 }
             };
 
     private Size getPreferredPreviewSize(Size[] mapSizes, int width, int height) {
+        double EPSL = 0.00001;
         List<Size> collectorSizes = new ArrayList<>();
+        // looking for the exact size or the onse with the exact ratio;
+        double preferredRatio = (double) width / height;
         for(Size option : mapSizes) {
-            if(width > height) {
-                if(option.getWidth() > width &&
-                        option.getHeight() > height) {
-                    collectorSizes.add(option);
-                }
-            } else {
-                if(option.getWidth() > height &&
-                        option.getHeight() > width) {
-                    collectorSizes.add(option);
-                }
+            if( width==option.getWidth() && height==option.getHeight() ){
+                return option;
+            }
+            double curRatio = (double)option.getWidth()/option.getHeight();
+            if( Math.abs(preferredRatio-curRatio) < EPSL) {
+                collectorSizes.add(option);
             }
         }
-        if(collectorSizes.size() > 0) {
-            return Collections.min(collectorSizes, new Comparator<Size>() {
-                @Override
-                public int compare(Size lhs, Size rhs) {
-                    return Long.signum(lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight());
+        if( collectorSizes.size()==0 ){ // if no size with the exact ratio
+            double minRatioDiff = 1000;
+            Size bestOption = null;
+            for(Size option : mapSizes) {
+                double curRatio = (double)option.getWidth()/option.getHeight();
+                if( Math.abs(curRatio-preferredRatio) < minRatioDiff ){
+                    bestOption = option;
                 }
-            });
+            }
+            return bestOption;
         }
-        return mapSizes[0];
+        return Collections.min(collectorSizes, new Comparator<Size>() {
+            @Override
+            public int compare(Size lhs, Size rhs) {
+                return Long.signum(lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight());
+            }
+        });
     }
 
 
