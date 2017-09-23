@@ -20,6 +20,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".Activities.DataCollectionActivity" />
+        <activity android:name=".Activities.TensorFlowActivity" />
     </application>
 
 </manifest>
