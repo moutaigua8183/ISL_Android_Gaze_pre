@@ -12,8 +12,11 @@ import android.widget.TextView;
 
 import com.moutaigua8183.isl_android_gaze.Controllers.CameraHandler;
 import com.moutaigua8183.isl_android_gaze.R;
+import com.moutaigua8183.isl_android_gaze.TensorFlow.TensorFlowInference;
 
 import org.w3c.dom.Text;
+
+import java.util.Random;
 
 /**
  * Created by Mou on 9/22/2017.
@@ -28,20 +31,6 @@ public class TensorFlowActivity extends AppCompatActivity {
     private Button btn_detect;
 
 
-
-    private static final int NUM_CLASSES = 1001;
-    private static final int INPUT_SIZE = 224;
-    private static final int IMAGE_MEAN = 117;
-    private static final float IMAGE_STD = 1;
-    private static final String INPUT_NAME = "input:0";
-    private static final String OUTPUT_NAME = "output:0";
-
-    private static final String MODEL_FILE =                "file:///android_asset/tensorflow_inception_graph.pb";
-    private static final String LABEL_FILE =
-            "file:///android_asset/imagenet_comp_graph_label_strings.txt";
-
-
-    private final TensorFlowClassifier tensorflow = new TensorFlowClassifier();
     private TextView mResultText;
 
     @Override
@@ -67,7 +56,15 @@ public class TensorFlowActivity extends AppCompatActivity {
         btn_detect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                float a = new Random().nextFloat();
+                float b = new Random().nextFloat();
+                float c = TensorFlowInference.getInstance(TensorFlowActivity.this).getResult(a,b);
+                String resStr = String.valueOf(a) +
+                            " + " +
+                            String.valueOf(b) +
+                            " = " +
+                            String.valueOf(c);
+                txt_result.setText(resStr);
             }
         });
 
@@ -79,13 +76,13 @@ public class TensorFlowActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         cameraHandler = CameraHandler.getInstance(this, DataCollectionActivity.Image_Size);
-        cameraHandler.startPreview(textureView);
+//        cameraHandler.startPreview(textureView);
     }
 
     @Override
     public void onPause(){
         super.onPause();
-        cameraHandler.stopPreview();
+//        cameraHandler.stopPreview();
     }
 
 
