@@ -4,15 +4,16 @@ import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
+import android.util.DisplayMetrics;
+import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 
 import com.moutaigua8183.isl_android_gaze.Activities.DataCollectionActivity;
-import com.moutaigua8183.isl_android_gaze.Controllers.CameraHandler;
+import com.moutaigua8183.isl_android_gaze.Handlers.CameraHandler;
 import com.moutaigua8183.isl_android_gaze.R;
 
 /**
@@ -30,7 +31,7 @@ public class FragmentPreview extends Fragment {
 
 
     public interface OnActionListener{
-        public void onClick();
+        void onClick();
     }
 
 
@@ -46,29 +47,24 @@ public class FragmentPreview extends Fragment {
         textureView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        onActionListener.onClick();
-                    }
-                }, 800);
+                onActionListener.onClick();
             }
         });
-        textureView.setLayoutParams(
-                // switch the height and width deliberately for better preview effect,
-                // but finally the image will be saved in the correct ratio
-                new RelativeLayout.LayoutParams(
-                        DataCollectionActivity.Image_Size.getHeight(),
-                        DataCollectionActivity.Image_Size.getWidth()
-                )
-        );
+        // ensure texture fill the screen with a certain ratio
+        int[] textureSize = fetchScreenSize();
+        int expected_height = textureSize[0]*DataCollectionActivity.Image_Size.getHeight()/DataCollectionActivity.Image_Size.getWidth();
+        if( expected_height< textureSize[1] ){
+            textureSize[1] = expected_height;
+        } else {
+            textureSize[0] = textureSize[1]*DataCollectionActivity.Image_Size.getWidth()/DataCollectionActivity.Image_Size.getHeight();
+        }
+        textureView.setLayoutParams(new RelativeLayout.LayoutParams(textureSize[0], textureSize[1]));
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        cameraHandler = CameraHandler.getInstance(getActivity(), DataCollectionActivity.Image_Size);
+        cameraHandler = CameraHandler.getInstance(getActivity());
         cameraHandler.startPreview(textureView);
     }
 
@@ -81,6 +77,12 @@ public class FragmentPreview extends Fragment {
 
     public void setOnActionListener(OnActionListener listener){
         this.onActionListener = listener;
+    }
+
+    private int[] fetchScreenSize(){
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        return new int[]{displayMetrics.widthPixels, displayMetrics.heightPixels};
     }
 
 

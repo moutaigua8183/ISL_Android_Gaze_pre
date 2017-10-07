@@ -6,12 +6,11 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.widget.Toast;
 
-import com.moutaigua8183.isl_android_gaze.Fragments.FragmentDataCollect;
+import com.moutaigua8183.isl_android_gaze.Fragments.FragmentDataCollection;
 import com.moutaigua8183.isl_android_gaze.Fragments.FragmentPreview;
 import com.moutaigua8183.isl_android_gaze.R;
 
@@ -21,7 +20,7 @@ import com.moutaigua8183.isl_android_gaze.R;
 
 public class DataCollectionActivity extends AppCompatActivity {
 
-    public static final Size    Image_Size = new Size(640, 480);
+    public static final Size    Image_Size = new Size(480, 640);
     private final String LOG_TAG = "DataCollectionActivity";
     private final String DOT_FRAGMENT_TAG = "DOT_FRAGMENT";
 
@@ -34,7 +33,7 @@ public class DataCollectionActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_data_collect);
+        setContentView(R.layout.activity_data_collection);
         getSupportActionBar().hide();
 
         fragmentManager = getSupportFragmentManager();
@@ -43,9 +42,9 @@ public class DataCollectionActivity extends AppCompatActivity {
             @Override
             public void onClick() {
                 Log.d(LOG_TAG, "Clicked");
-                FragmentDataCollect fragmentDataCollect = new FragmentDataCollect();
+                FragmentDataCollection fragmentDataCollection = new FragmentDataCollection();
                 FragmentTransaction transaction = fragmentManager.beginTransaction();
-                transaction.replace(R.id.activity_data_collection_layout_fragment_holder, fragmentDataCollect, DOT_FRAGMENT_TAG);
+                transaction.replace(R.id.activity_data_collection_layout_fragment_holder, fragmentDataCollection, DOT_FRAGMENT_TAG);
                 transaction.commit();
             }
         });
@@ -69,7 +68,7 @@ public class DataCollectionActivity extends AppCompatActivity {
             super.onBackPressed();
             return;
         } else {
-            if( !((FragmentDataCollect)fragment).isPicSaved() ){
+            if( !((FragmentDataCollection)fragment).isPicSaved() ){
                 return;
             }
             if (doubleBackToExitPressedOnce) {

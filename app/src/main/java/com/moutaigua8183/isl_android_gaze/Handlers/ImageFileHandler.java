@@ -1,4 +1,4 @@
-package com.moutaigua8183.isl_android_gaze.Controllers;
+package com.moutaigua8183.isl_android_gaze.Handlers;
 
 import android.graphics.ImageFormat;
 import android.media.Image;
@@ -21,13 +21,14 @@ import java.util.Date;
 
 public class ImageFileHandler {
 
-    private final String LOG_TAG = "Image_File_Handler";
+    private final String LOG_TAG = "ImageFileHandler";
     private final String FOLDER_NAME = "Android_Gaze_Data";
     private ImageReader imageReader;
     private int imageWidth;
     private int imageHeight;
     private int imageFormat;
     private int maxImages;
+    private String imageFolderPath;
     private String imageName;
     private SavingCallback savingCallback;
 
@@ -97,16 +98,17 @@ public class ImageFileHandler {
             Log.d(LOG_TAG, "Invalid filename. Image is not saved");
             return;
         }
-        File picFolderRoot = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), FOLDER_NAME);
-        if (!picFolderRoot.exists()){
-            if (!picFolderRoot.mkdirs()){
-                Log.d("App", "failed to create directory");
-            }
-        }
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
         String timeDate = sdf.format(new Date());
         String subFolderName = timeDate;
+        File picFolder = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES), FOLDER_NAME + File.separator + subFolderName);
+        if (!picFolder.exists()){
+            if (!picFolder.mkdirs()){
+                Log.d("App", "failed to create directory");
+            }
+        }
+        imageFolderPath = picFolder.getPath();
         String file_name_sufix;
         switch (this.imageFormat){
             case ImageFormat.JPEG:
@@ -116,7 +118,7 @@ public class ImageFileHandler {
                 file_name_sufix = ".jpg";
                 break;
         }
-        File picFile = new File(picFolderRoot.getPath() + File.separator + subFolderName  + File.separator + file_name + file_name_sufix);
+        File picFile = new File(picFolder.getPath() + File.separator + file_name + file_name_sufix);
         try {
             OutputStream output = new FileOutputStream(picFile);
             output.write(imageData);
@@ -140,18 +142,16 @@ public class ImageFileHandler {
     }
 
     public void deleteLastImage(){
-        File picFolderRoot = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), FOLDER_NAME);
-        String file_name_sufix;
+        String file_name_suffix;
         switch (this.imageFormat){
             case ImageFormat.JPEG:
-                file_name_sufix = ".jpg";
+                file_name_suffix = ".jpg";
                 break;
             default:
-                file_name_sufix = ".jpg";
+                file_name_suffix = ".jpg";
                 break;
         }
-        File picFile = new File(picFolderRoot.getPath() + File.separator + imageName + file_name_sufix);
+        File picFile = new File(imageFolderPath + File.separator + imageName + file_name_suffix);
         if( picFile.exists() ){
             if( picFile.delete() ){
                 Log.d(LOG_TAG, "Image " + imageName + " is deleted");

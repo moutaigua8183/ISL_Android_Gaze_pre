@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/fragment_dot_container_layout_dotHolder"
+    android:id="@+id/fragment_data_collection_layout_dotHolder"
     tools:context="com.moutaigua8183.isl_android_gaze.Activities.MainActivity">
 
 

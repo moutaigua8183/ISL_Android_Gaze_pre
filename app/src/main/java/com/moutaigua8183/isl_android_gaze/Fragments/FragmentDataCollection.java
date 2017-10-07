@@ -8,15 +8,15 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
-import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import com.moutaigua8183.isl_android_gaze.Activities.DataCollectionActivity;
-import com.moutaigua8183.isl_android_gaze.Controllers.CameraHandler;
-import com.moutaigua8183.isl_android_gaze.Controllers.DotController;
-import com.moutaigua8183.isl_android_gaze.Controllers.ImageFileHandler;
+import com.moutaigua8183.isl_android_gaze.Handlers.CameraHandler;
+import com.moutaigua8183.isl_android_gaze.Handlers.DotHandler;
+import com.moutaigua8183.isl_android_gaze.Handlers.ImageFileHandler;
 import com.moutaigua8183.isl_android_gaze.R;
 
 /**
@@ -24,14 +24,15 @@ import com.moutaigua8183.isl_android_gaze.R;
  */
 
 
-public class FragmentDataCollect extends Fragment {
+public class FragmentDataCollection extends Fragment {
 
 
-    private final String LOG_TAG = "FragmentDataCollect";
+    private final String LOG_TAG = "FragmentDataCollection";
     private View dotHolderLayout;
     private CameraHandler cameraHandler;
-    private DotController dotController;
+    private DotHandler  dotHandler;
     private int[] SCREEN_SIZE;
+    private int firstSeveralDots = 0;
     private boolean isPicSaved = false;
 
 
@@ -39,54 +40,77 @@ public class FragmentDataCollect extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_dot_container, container, false);
+        return inflater.inflate(R.layout.fragment_data_collection, container, false);
     }
 
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        dotHolderLayout = getActivity().findViewById(R.id.fragment_dot_container_layout_dotHolder);
+        dotHolderLayout = getActivity().findViewById(R.id.fragment_data_collection_layout_dotHolder);
         dotHolderLayout.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
-                if( !isPicSaved ){
-                    return true;
+                // first press is to start
+                if(firstSeveralDots ==0){
+                    Handler handler = new Handler();
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            dotHandler.showNext();
+                            delayCapture(400);
+                        }
+                    }, 500);
+                    firstSeveralDots++;
+                    return false;
                 }
+                if( !isPicSaved ){
+                    return false;
+                }
+                // first 2 pictures will be deleted
+                if( firstSeveralDots ==1 || firstSeveralDots ==2 ){
+                    Log.d(LOG_TAG, String.valueOf(firstSeveralDots));
+                    cameraHandler.deleteLastPicture();
+                    firstSeveralDots++;
+                    dotHandler.showNext();
+                    delayCapture(400);
+                    isPicSaved = false;
+                }
+                // for the future dots
                 if (motionEvent.getAction() == MotionEvent.ACTION_UP){
                     Log.d(LOG_TAG, "pressed");
                     boolean is_click_on_left = motionEvent.getRawX() <= (SCREEN_SIZE[0]/2);
-                    if( is_click_on_left && dotController.getCurrPointType()!=DotController.POINT_TYPE_LEFT
-                            || !is_click_on_left && dotController.getCurrPointType()!=DotController.POINT_TYPE_RIGHT ) {
+                    if( is_click_on_left && dotHandler.getCurrDotType()!= DotHandler.POINT_TYPE_LEFT
+                            || !is_click_on_left && dotHandler.getCurrDotType()!= DotHandler.POINT_TYPE_RIGHT ) {
                         // invalid picture
                         cameraHandler.deleteLastPicture();
                         Log.d(LOG_TAG, "Invalid Picture");
                     }
-                    dotController.showNext();
+                    dotHandler.showNext();
                     delayCapture(400);
                     isPicSaved = false;     // reset the status
                 }
                 return true;
             }
         });
+        Toast.makeText(getActivity(), "Click anywhere to start\nFirst 2 dots don't count", Toast.LENGTH_LONG).show();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        cameraHandler = CameraHandler.getInstance(getActivity(), DataCollectionActivity.Image_Size);
+        cameraHandler = CameraHandler.getInstance(getActivity());
+        cameraHandler.setImageSize(DataCollectionActivity.Image_Size);
         cameraHandler.setSavingCallback(new ImageFileHandler.SavingCallback() {
             @Override
             public void onSaved() {
                 isPicSaved = true;
             }
         });
-        cameraHandler.openFrontCamera();
+        cameraHandler.openFrontCameraForDataCollection();
         SCREEN_SIZE = fetchScreenSize();
         Log.d(LOG_TAG, "Width: " + SCREEN_SIZE[0] + "    Height: " + SCREEN_SIZE[1]);
-        dotController = new DotController(getActivity(), SCREEN_SIZE);
-        dotController.setDotHolderLayout((FrameLayout)dotHolderLayout);
-        dotController.showNext();
-        delayCapture(450);      //250ms for human eye reaction
+        dotHandler = new DotHandler(getActivity(), SCREEN_SIZE);
+        dotHandler.setDotHolderLayout((FrameLayout)dotHolderLayout);
     }
 
 
@@ -95,8 +119,9 @@ public class FragmentDataCollect extends Fragment {
         super.onPause();
         if( isPicSaved ){
             cameraHandler.deleteLastPicture();
+            firstSeveralDots = 0;
         }
-        cameraHandler.closeFrontCamera();
+        cameraHandler.closeFrontCameraForDataCollection();
     }
 
 
@@ -109,7 +134,7 @@ public class FragmentDataCollect extends Fragment {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                cameraHandler.takePicture(dotController.getCurrPoint());
+                cameraHandler.takePicture(dotHandler.getCurrDot());
             }
         }, delayLength);
     }
@@ -117,7 +142,7 @@ public class FragmentDataCollect extends Fragment {
     private int[] fetchScreenSize(){
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        return new int[]{displayMetrics.heightPixels, displayMetrics.widthPixels};
+        return new int[]{displayMetrics.widthPixels, displayMetrics.heightPixels};
     }
 
 
