@@ -45,6 +45,14 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        Button btn_tensorflow_temp= (Button) findViewById(R.id.main_activity_btn_tensorflow_speed_test);
+        btn_tensorflow_temp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, TensorFlowActivityTemp.class);
+                startActivity(intent);
+            }
+        });
         Button btn_exit =  (Button) findViewById(R.id.main_activity_btn_exit);
         btn_exit.setOnClickListener(new View.OnClickListener() {
             @Override

@@ -10,6 +10,8 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        renderscriptTargetApi 18
+        renderscriptSupportModeEnabled true
     }
     buildTypes {
         release {
@@ -31,9 +33,14 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     compile 'com.android.support:appcompat-v7:25.3.1'
+    compile 'com.android.volley:volley:1.0.0'
     testCompile 'junit:junit:4.12'
     compile files("libs/libandroid_tensorflow_inference_java.jar");
-    compile 'org.ujmp:ujmp-jmatio:0.3.+'    // to read .mat file
-    compile 'org.ujmp:ujmp-core:0.3.+'    // to read .mat file
+    compile 'com.github.kittinunf.fuel:fuel-android:1.11.0'         // form-data  upload an image
+    compile 'com.loopj.android:android-async-http:1.4.9'
+    compile 'com.squareup.okhttp:okhttp:2.5.0'
+    compile 'com.squareup.mimecraft:mimecraft:1.1.1'
+//    compile 'org.ujmp:ujmp-jmatio:0.3.+'    // to read .mat file
+//    compile 'org.ujmp:ujmp-core:0.3.+'    // to read .mat file
 
 }

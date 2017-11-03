@@ -44,6 +44,17 @@
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:id="@+id/main_activity_btn_tensorflow_speed_test"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="50dp"
+        android:layout_marginRight="50dp"
+        android:text="Speed Test"
+        android:textSize="20sp"
+        android:textAllCaps="false"/>
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:id="@+id/main_activity_btn_exit"
         android:layout_marginTop="20dp"
         android:layout_marginLeft="50dp"

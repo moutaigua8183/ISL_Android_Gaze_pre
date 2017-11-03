@@ -3,6 +3,7 @@ package com.moutaigua8183.isl_android_gaze.Handlers;
 import android.content.Context;
 import android.graphics.Point;
 import android.util.Log;
+import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -169,6 +170,26 @@ public class DotHandler {
         dotHolderLayout.addView(dotTextView);
         //set the current point
         currDot.set(params.leftMargin, params.topMargin);
+    }
+
+    public void showDot(int x, int y, FrameLayout dotHolder){
+        if( null==dotHolder ){
+            String warning = "No layout is assigned for displaying dots";
+            Log.d(LOG_TAG, warning);
+            Toast.makeText(ctxt, warning, Toast.LENGTH_SHORT );
+            return;
+        }
+        dotHolder.removeAllViews();
+        TextView resDotTextView = new TextView(ctxt);
+        resDotTextView.setBackgroundResource(R.drawable.dot_green25);
+        //setting image position
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT);
+        params.leftMargin = x;
+        params.topMargin = y;
+        resDotTextView.setLayoutParams(params);
+        //adding view to layout
+        dotHolder.addView(resDotTextView);
     }
 
     public void show4CornerDots(){

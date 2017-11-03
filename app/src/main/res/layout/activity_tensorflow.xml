@@ -13,7 +13,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/activity_tensorflow_layout_dotHolder"
+        android:id="@+id/activity_tensorflow_layout_dotHolder_background"
         android:layout_centerInParent="true"
         android:background="@android:color/transparent"/>
 
@@ -21,7 +21,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/activity_tensorflow_txtview_result"
-        android:layout_centerInParent="true"/>
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:textSize="25dp"
+        android:text="test" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/activity_tensorflow_layout_dotHolder_result"
+        android:layout_centerInParent="true"
+        android:background="@android:color/transparent"/>
 
 
 </RelativeLayout>

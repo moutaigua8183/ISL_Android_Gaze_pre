@@ -16,9 +16,11 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.ImageReader;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.annotation.BoolRes;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.PermissionChecker;
@@ -29,9 +31,10 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.widget.Toast;
 
+import com.moutaigua8183.isl_android_gaze.Activities.DataCollectionActivity;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -45,6 +48,9 @@ import java.util.concurrent.TimeUnit;
 
 public class CameraHandler {
 
+    public static final int CAMERA_STATE_IDLE = 0;
+    public static final int CAMERA_STATE_PREVIEW = 1;
+    public static final int CAMERA_STATE_STILL_CAPTURE = 2;
     private final String LOG_TAG = "CameraHandler";
     private final int IMAGE_FORMAT = ImageFormat.JPEG;      //if changed, modify capureBuilder.set(Orientation, ) accordingly
 
@@ -54,24 +60,35 @@ public class CameraHandler {
     private CameraManager   cameraManager;
     private CameraDevice    frontCamera;
     private ImageFileHandler imageFileHandler;
+    private int             cameraState;
 
 
 
 
 
     // private constructor
-    private CameraHandler(Context context) {
+    private CameraHandler(Context context, boolean isUpload) {
         this.ctxt = context;
         cameraManager = (CameraManager) ctxt.getSystemService(Context.CAMERA_SERVICE);
         imageFileHandler = new ImageFileHandler();
+        if( isUpload ) {
+            imageReaderForPrev = ImageReader.newInstance(
+                    DataCollectionActivity.Image_Size.getWidth(),
+                    DataCollectionActivity.Image_Size.getHeight(),
+                    ImageFormat.YUV_420_888,
+                    100
+            );
+        } else {
+            imageReaderForPrev = null;
+        }
         frontCamera = null;
-
+        cameraState = CAMERA_STATE_IDLE;
     }
 
     // to create a CameraHandler Singleton
-    public static synchronized CameraHandler getInstance(Context context) {
+    public static synchronized CameraHandler getInstance(Context context, boolean isUpload) {
         if (null == myInstance) {
-            myInstance = new CameraHandler(context);
+            myInstance = new CameraHandler(context, isUpload);
         }
         return myInstance;
     }
@@ -222,18 +239,18 @@ public class CameraHandler {
         try {
             final List<Surface> outputSurfaces = new ArrayList<>();
             outputSurfaces.add(imageFileHandler.getImageReader().getSurface());
-            captureBuilderForImage = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            captureBuilderForImage.addTarget(imageFileHandler.getImageReader().getSurface());
-            captureBuilderForImage.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-            captureBuilderForImage.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
-            captureBuilderForImage.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
-            captureBuilderForImage.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CameraMetadata.CONTROL_AE_ANTIBANDING_MODE_60HZ);
-            captureBuilderForImage.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_HDR);
-            captureBuilderForImage.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
             frontCamera.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             try {
+                                captureBuilderForImage = frontCamera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+                                captureBuilderForImage.addTarget(imageFileHandler.getImageReader().getSurface());
+                                captureBuilderForImage.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+                                captureBuilderForImage.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+                                captureBuilderForImage.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
+                                captureBuilderForImage.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CameraMetadata.CONTROL_AE_ANTIBANDING_MODE_60HZ);
+                                captureBuilderForImage.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_HDR);
+                                captureBuilderForImage.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
                                 session.capture(captureBuilderForImage.build(), null, null);
                             } catch (CameraAccessException e) {
                                 Log.e(LOG_TAG, " exception occurred while accessing " + frontCamera.getId(), e);
@@ -270,9 +287,14 @@ public class CameraHandler {
     private CameraDevice    frontCameraForPrev;
     private Semaphore       cameraOpenCloseLockForPrev = new Semaphore(1);
     private CaptureRequest.Builder  captureBuilderForPrev;
+    private ImageReader     imageReaderForPrev;
+    private boolean         isImageAvailableListenerForPrevSet = false;
 
     public void startPreview(TextureView textureView) {
         cameraManager = (CameraManager) ctxt.getSystemService(Context.CAMERA_SERVICE);
+        HandlerThread handlerThread = new HandlerThread("Gaze_DataCollection_Preview");
+        handlerThread.start();
+        handlerForPrev = new Handler(handlerThread.getLooper());
         textureViewForPrev = textureView;
         textureViewForPrev.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
@@ -311,13 +333,25 @@ public class CameraHandler {
             frontCameraForPrev.close();
             frontCameraForPrev = null;
         }
+        handlerForPrev = null;
+        cameraState = CAMERA_STATE_IDLE;
+    }
+
+    public void setOnImageAvailableListenerForPrev(ImageReader.OnImageAvailableListener listener){
+        imageReaderForPrev.setOnImageAvailableListener(listener, null);
+        isImageAvailableListenerForPrevSet = true;
+    }
+
+    public void setCameraState(int state){
+        cameraState = state;
+    }
+
+    public int getCameraState(){
+        return cameraState;
     }
 
     private void initCameraAndPreview(int width, int height) {
         Log.d(LOG_TAG, "init camera and preview");
-        HandlerThread handlerThread = new HandlerThread("Gaze_DataCollection_Preview");
-        handlerThread.start();
-        handlerForPrev = new Handler(handlerThread.getLooper());
         try {
             String frontCameraId = getFrontCameraId();
             CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(frontCameraId);
@@ -337,6 +371,7 @@ public class CameraHandler {
                     Log.d(LOG_TAG,"Front camera is opened.");
                     cameraOpenCloseLockForPrev.release();
                     frontCameraForPrev = camera;
+                    cameraState = CAMERA_STATE_PREVIEW;
                     createCameraCaptureSession();
                 }
 
@@ -344,15 +379,19 @@ public class CameraHandler {
                 public void onClosed(@NonNull CameraDevice camera) {
                     super.onClosed(camera);
                     frontCameraForPrev = null;
+                    cameraState = CAMERA_STATE_IDLE;
                 }
 
                 @Override
                 public void onDisconnected(@NonNull CameraDevice camera) {
+                    frontCameraForPrev = camera;
+                    cameraState = CAMERA_STATE_IDLE;
                 }
 
                 @Override
                 public void onError(@NonNull CameraDevice camera, int error) {
                     frontCameraForPrev = camera;
+                    cameraState = CAMERA_STATE_IDLE;
                 }
             }, handlerForPrev);
         } catch (CameraAccessException e) {
@@ -364,14 +403,24 @@ public class CameraHandler {
 
     private void createCameraCaptureSession(){
         Log.d(LOG_TAG,"createCameraCaptureSession");
+        if( null!=imageReaderForPrev && !isImageAvailableListenerForPrevSet){
+            Log.d(LOG_TAG, "OnImageAvailableListener should be assigned specifically for Image Upload, can\'t upload picture.");
+            return;
+        }
         try {
+            final List<Surface> outputSurfaces = new ArrayList<>();
             surfaceTextureForPrev = textureViewForPrev.getSurfaceTexture();
             surfaceTextureForPrev.setDefaultBufferSize(imageSizeForPrev.getWidth(), imageSizeForPrev.getHeight());
-            Surface outputSurface = new Surface(surfaceTextureForPrev);
+            Surface previewSurface = new Surface(surfaceTextureForPrev);
             captureBuilderForPrev = frontCameraForPrev.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            captureBuilderForPrev.addTarget(outputSurface);
+            captureBuilderForPrev.addTarget(previewSurface);
+            outputSurfaces.add(previewSurface);
+            if( null!=imageReaderForPrev ){
+                captureBuilderForPrev.addTarget(imageReaderForPrev.getSurface());
+                outputSurfaces.add(imageReaderForPrev.getSurface());
+            }
             frontCameraForPrev.createCaptureSession(
-                    Arrays.asList(outputSurface),
+                    outputSurfaces,
                     new CameraCaptureSession.StateCallback() {
                                 @Override
                                 public void onConfigured(CameraCaptureSession session) {
@@ -380,13 +429,13 @@ public class CameraHandler {
                                                 CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                                         captureBuilderForPrev.set(CaptureRequest.CONTROL_AE_MODE,
                                                 CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-                                        session.setRepeatingRequest(captureBuilderForPrev.build(), sessionCaptureCallbackForPrev, handlerForPrev);
                                         captureBuilderForPrev.set(CaptureRequest.CONTROL_SCENE_MODE, CameraMetadata.CONTROL_SCENE_MODE_FACE_PRIORITY);
                                         captureBuilderForPrev.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, CameraMetadata.STATISTICS_FACE_DETECT_MODE_SIMPLE);
                                         captureBuilderForPrev.set(CaptureRequest.JPEG_ORIENTATION, getOrientation());
+                                        session.setRepeatingRequest(captureBuilderForPrev.build(), sessionCaptureCallbackForPrev, handlerForPrev);
                                     } catch (CameraAccessException e) {
                                         e.printStackTrace();
-                                        Log.e("linc","set preview builder failed."+e.getMessage());
+                                        Log.d(LOG_TAG,"set preview builder failed."+e.getMessage());
                                     }
                                 }
 
@@ -411,7 +460,7 @@ public class CameraHandler {
     private Size getPreferredPreviewSize(Size[] mapSizes, int width, int height) {
         double EPSL = 0.00001;
         List<Size> collectorSizes = new ArrayList<>();
-        // looking for the exact size or the onse with the exact ratio;
+        // looking for the exact size or the one with the exact ratio;
         double preferredRatio = (double) width / height;
         for(Size option : mapSizes) {
             if( width==option.getWidth() && height==option.getHeight() ){
@@ -433,6 +482,7 @@ public class CameraHandler {
             }
             return bestOption;
         }
+//        return new Size(800, 600);
         return Collections.max(collectorSizes, new Comparator<Size>() {
             @Override
             public int compare(Size lhs, Size rhs) {
@@ -440,21 +490,6 @@ public class CameraHandler {
             }
         });
     }
-
-
-
-    /******************* TensorFlow Image Demo ********************/
-
-
-    private CameraManager   cameraManagerForImageDemo;
-    private TextureView     textureViewForImageDemo;
-    private SurfaceTexture  surfaceTextureForImageDemo;
-    private Size            imageSizeForImageDemo;
-    private Handler         handlerForImageDemo;
-    private CameraDevice    frontCameraForImageDemo;
-    private Semaphore       cameraOpenCloseLockForImageDemo = new Semaphore(1);
-    private CaptureRequest.Builder  captureBuilderForImageDemo;
-
 
 
 }

@@ -18,10 +18,10 @@ public class TensorFlowHandler {
 
     private static TensorFlowHandler myInstance;
     private TensorFlowInferenceInterface tf;
-    private static final String MODEL_FILE = "file:///android_asset/optimized_test.pb";
-    private static final String INPUT_NODE = "input_image";
+    private static final String MODEL_FILE = "file:///android_asset/eye_state_v1_ft_VTTI_all_images.pb";
+    private static final String INPUT_NODE = "eye"; //"input_image";
     private static final long[] INPUT_SIZE = {1,3};
-    private static final String[] OUTPUT_NODES = {"output"};
+    private static final String[] OUTPUT_NODES = {"eye_state0"};    //{"output"};
     private static final int OUTPUT_SIZE = 6;
     private static AssetManager assetManager;
 
@@ -56,6 +56,18 @@ public class TensorFlowHandler {
         float[] input_array = ImageProcessHandler.toTensorFlowEyeModelArray(images);
         tf.fillNodeFloat(INPUT_NODE,
                 new int[]{images.length, ImageProcessHandler.EYE_MODEL_INPUTSIZE_ROWS, ImageProcessHandler.EYE_MODEL_INPUTSIZE_COLUMNS, ImageProcessHandler.EYE_MODEL_INPUTSIZE_COLORS},
+                input_array);
+        tf.runInference(OUTPUT_NODES);
+        // retrieve result from TensorFlow model
+        float[] loc = new float[ images.length * 2];
+        tf.readNodeFloat(OUTPUT_NODES[0], loc);
+        return loc;
+    }
+
+    public float[] getResultFromNewPbFile(float[][][] images){
+        float[] input_array = ImageProcessHandler.toTensorFlowEyeModelArray(images);
+        tf.fillNodeFloat(INPUT_NODE,
+                new int[]{images.length, images[0].length, images[0][0].length, 1},
                 input_array);
         tf.runInference(OUTPUT_NODES);
         // retrieve result from TensorFlow model

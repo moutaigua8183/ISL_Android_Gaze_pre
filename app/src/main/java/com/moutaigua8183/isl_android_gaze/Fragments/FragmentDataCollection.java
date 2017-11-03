@@ -98,7 +98,7 @@ public class FragmentDataCollection extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        cameraHandler = CameraHandler.getInstance(getActivity());
+        cameraHandler = CameraHandler.getInstance(getActivity(), false);
         cameraHandler.setImageSize(DataCollectionActivity.Image_Size);
         cameraHandler.setSavingCallback(new ImageFileHandler.SavingCallback() {
             @Override

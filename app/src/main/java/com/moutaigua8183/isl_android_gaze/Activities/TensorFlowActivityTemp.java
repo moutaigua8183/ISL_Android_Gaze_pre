@@ -46,15 +46,14 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by Mou on 9/22/2017.
  */
 
-public class TensorFlowActivity extends AppCompatActivity {
+public class TensorFlowActivityTemp extends AppCompatActivity {
 
-    private final String LOG_TAG = "TensorFlowActivity";
+    private final String LOG_TAG = "TensorFlowActivityTemp";
     private CameraHandler cameraHandler;
     private DotHandler dotHandler;
     private TextureView textureView;
@@ -63,12 +62,21 @@ public class TensorFlowActivity extends AppCompatActivity {
     private TextView    result_board;
     private int[]       SCREEN_SIZE;
 
+    //upload test
+    private TextView    textViewSenderCounter;
+    private TextView    textViewReceiveCounter;
+    private int         senderCounter = 0;
+    private int         receiveCounter = 0;
+    private int         testSize = 150;
+    private Timer       timer = new Timer(true);
+    private Handler     handler;
+    private Runnable    runnable;
 
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_tensorflow);
+        setContentView(R.layout.activity_tensorflow_temp);
         getSupportActionBar().hide();
 
         SCREEN_SIZE = fetchScreenSize();
@@ -89,9 +97,14 @@ public class TensorFlowActivity extends AppCompatActivity {
         view_dot_container.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                result_board.setText("");
-                Log.d(LOG_TAG, "pressed");
-                cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_STILL_CAPTURE);
+                if (cameraHandler.getCameraState() != CameraHandler.CAMERA_STATE_STILL_CAPTURE){
+                    result_board.setText("");
+                    Log.d(LOG_TAG, "pressed");
+                    cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_STILL_CAPTURE);
+                    TimerHandler.getInstance().reset();
+                    TimerHandler.getInstance().tic();
+                    handler.postDelayed(runnable, 10);
+                }
             }
         });
         view_dot_container_result = (FrameLayout) findViewById(R.id.activity_tensorflow_layout_dotHolder_result);
@@ -102,6 +115,19 @@ public class TensorFlowActivity extends AppCompatActivity {
 
         result_board = (TextView) findViewById(R.id.activity_tensorflow_txtview_result);
 
+
+        // upload test
+        textViewSenderCounter = (TextView) findViewById(R.id.activity_tensorflow_txtview_send_counter);
+        textViewReceiveCounter = (TextView) findViewById(R.id.activity_tensorflow_txtview_receive_counter);
+        handler = new Handler();
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                double inSec = (double)TimerHandler.getInstance().toc() / 1000;
+                result_board.setText(String.valueOf(inSec));
+                handler.postDelayed(runnable, 50);
+            }
+        };
 
     }
 
@@ -114,17 +140,26 @@ public class TensorFlowActivity extends AppCompatActivity {
             @Override
             public void onImageAvailable(ImageReader reader) {
                 Image image = reader.acquireNextImage();
-                if( cameraHandler.getCameraState()==CameraHandler.CAMERA_STATE_STILL_CAPTURE ) {
-                    cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_PREVIEW);
-                    Log.d(LOG_TAG, "Take a picture");
+//                if( cameraHandler.getCameraState()==CameraHandler.CAMERA_STATE_STILL_CAPTURE ) {
+//                    cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_PREVIEW);
+//                    Log.d(LOG_TAG, "Take a picture");
 //                    ByteBuffer buffer = image. getPlanes()[0]. getBuffer();
 //                    byte[] bwImageBytes = new byte[buffer.capacity()];
 //                    buffer.get(bwImageBytes);
 //                    uploadImage(bwImageBytes);
-                    TimerHandler.getInstance().reset();
-                    TimerHandler.getInstance().tic();
-                    ImageProcessHandler.YUVtoJPEGByte(image, TensorFlowActivity.this);
-                    Log.d(LOG_TAG, String.valueOf(TimerHandler.getInstance().toc()));
+//                }
+                if( cameraHandler.getCameraState()==CameraHandler.CAMERA_STATE_STILL_CAPTURE
+                        && senderCounter < testSize ) {
+//                    byte[] coloredImageBytes = YUV_420_888_to_NV21(image);
+                    ByteBuffer buffer = image. getPlanes()[0]. getBuffer();
+                    byte[] bwImageBytes = new byte[buffer.capacity()];
+                    buffer.get(bwImageBytes);
+                    uploadTest(bwImageBytes);
+                    senderCounter++;
+                    textViewSenderCounter.setText(String.valueOf(senderCounter));
+                    if( senderCounter==testSize ){
+                        cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_PREVIEW);
+                    }
                 }
                 image.close();
             }
@@ -209,7 +244,7 @@ public class TensorFlowActivity extends AppCompatActivity {
     }
 
     private void uploadImage(byte[] imageBytes){
-        VolleyHandler.getInstance(TensorFlowActivity.this).uploadFileToServer(
+        VolleyHandler.getInstance(TensorFlowActivityTemp.this).uploadFileToServer(
                 "http://ec2-54-236-72-209.compute-1.amazonaws.com/api/v1.0/upload",
                 imageBytes,
                 "image",
@@ -217,6 +252,7 @@ public class TensorFlowActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(JSONObject response) {
 //                        android.os.Debug.waitForDebugger();
+                        Log.d("VolleyHandler", "success");
                         Log.d(LOG_TAG, String.valueOf(TimerHandler.getInstance().toc()) );
                         try {
                             JSONObject jsonRes = response;
@@ -235,7 +271,7 @@ public class TensorFlowActivity extends AppCompatActivity {
                                 }
                                 String timer1 = jsonRes.getString("timer1").substring(0,5);
                                 String timer2 = jsonRes.getString("timer2").substring(0,5);
-                                String resStr = "Prep: " + timer1 + "sec\n Crop: " + timer2 + " sec";
+                                String resStr = "Preprocess: " + timer1 + "ms\n Crop: " + timer2 + " ms";
                                 Log.d(LOG_TAG, resStr);
                                 result_board.setText(resStr);
                             }
@@ -247,8 +283,37 @@ public class TensorFlowActivity extends AppCompatActivity {
         );
     }
 
-
-
+    private void uploadTest(byte[] imageBytes){
+        VolleyHandler.getInstance(TensorFlowActivityTemp.this).uploadFileToServer(
+                "http://ec2-54-236-72-209.compute-1.amazonaws.com/api/v1.0/uploadTest",
+                imageBytes,
+                "image",
+                new com.android.volley.Response.Listener<JSONObject>(){
+                    @Override
+                    public void onResponse(JSONObject response) {
+//                        android.os.Debug.waitForDebugger();
+                        Log.d(LOG_TAG, String.valueOf(TimerHandler.getInstance().toc()) );
+                        try {
+                            JSONObject jsonRes = response;
+                            int num = jsonRes.getInt("counter");
+                            receiveCounter += num;
+                            textViewReceiveCounter.setText(String.valueOf(receiveCounter));
+                            JSONObject jsonData = jsonRes.getJSONObject("data");
+                            double widthRatio = jsonData.getDouble("width");
+                            double heightRatio = jsonData.getDouble("height");
+                            int x = (int) (SCREEN_SIZE[0] * widthRatio);
+                            int y = (int) (SCREEN_SIZE[1] * heightRatio);
+                            dotHandler.showDot(x, y, view_dot_container_result);
+                            if( receiveCounter==testSize ){
+                                handler.removeCallbacks(runnable);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+        );
+    }
 
 
 
@@ -259,7 +324,7 @@ public class TensorFlowActivity extends AppCompatActivity {
         int[][][][] rawImages = readUInt16DataFromMatFile("eye_left_all.dat", pic_num);
         long timestamp_start = System.currentTimeMillis();
         float[][][][] processedImages = ImageProcessHandler.getStandardizedNormalDistribution(rawImages);
-        float[] para = TensorFlowHandler.getInstance(TensorFlowActivity.this).getEstimatedLocation(processedImages);
+        float[] para = TensorFlowHandler.getInstance(TensorFlowActivityTemp.this).getEstimatedLocation(processedImages);
         long timestamp_end = System.currentTimeMillis();
         int[] ScreenSize = fetchScreenSize();
         double err_x = 0;
@@ -286,7 +351,7 @@ public class TensorFlowActivity extends AppCompatActivity {
         int pic_num = 1074;
         int[][][] pre_image = readEyeStateFromMatFile("eye_state_left.dat", pic_num);
         float[][][] post_image = ImageProcessHandler.getStandardizedNormalDistribution(pre_image);
-        float[] para = TensorFlowHandler.getInstance(TensorFlowActivity.this).getResultFromNewPbFile(post_image);
+        float[] para = TensorFlowHandler.getInstance(TensorFlowActivityTemp.this).getResultFromNewPbFile(post_image);
         String content = "";
         for(int i=0; i<para.length/2; i++){
             content += String.valueOf(para[i*2]) + "   " + String.valueOf(para[i*2+1]) + "\n";
