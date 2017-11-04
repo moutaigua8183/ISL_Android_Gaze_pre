@@ -1,30 +1,36 @@
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.model.application'
 
-android {
-    compileSdkVersion 25
-    buildToolsVersion "26.0.1"
-    defaultConfig {
-        applicationId "com.moutaigua8183.isl_android_gaze"
-        minSdkVersion 21
-        targetSdkVersion 25
-        versionCode 1
-        versionName "1.0"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        renderscriptTargetApi 18
-        renderscriptSupportModeEnabled true
+model {
+    android {
+        compileSdkVersion = 25
+        buildToolsVersion = "26.0.1"
+        defaultConfig {
+            applicationId "com.moutaigua8183.isl_android_gaze"
+            minSdkVersion.apiLevel 21
+            targetSdkVersion.apiLevel 25
+            versionCode 1
+            versionName "1.0"
+            testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+            renderscriptTargetApi 18
+            renderscriptSupportModeEnabled true
+        }
     }
-    buildTypes {
+
+    android.buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles.add(file('proguard-android.txt'))
         }
+    }
+    android.ndk {
+        moduleName "ndktest"
     }
 
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['libs']
-        }
-    }
+
+
+
+
+
 }
 
 dependencies {

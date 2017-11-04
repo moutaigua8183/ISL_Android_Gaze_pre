@@ -9,8 +9,10 @@ import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.moutaigua8183.isl_android_gaze.R;
 
@@ -49,8 +51,9 @@ public class MainActivity extends AppCompatActivity {
         btn_tensorflow_temp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, TensorFlowActivityTemp.class);
-                startActivity(intent);
+//                Intent intent = new Intent(MainActivity.this, TensorFlowActivityTemp.class);
+//                startActivity(intent);
+                Toast.makeText(MainActivity.this, getMsg(), Toast.LENGTH_SHORT).show();
             }
         });
         Button btn_exit =  (Button) findViewById(R.id.main_activity_btn_exit);
@@ -102,5 +105,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+
+    /**********************  ********************/
+
+    static {
+        System.loadLibrary("ndktest");
+    }
+
+    public native String getMsg();
 
 }
