@@ -14,6 +14,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.moutaigua8183.isl_android_gaze.Handlers.TensorFlowHandler;
 import com.moutaigua8183.isl_android_gaze.R;
 
 import java.util.ArrayList;
@@ -51,9 +52,8 @@ public class MainActivity extends AppCompatActivity {
         btn_tensorflow_temp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Intent intent = new Intent(MainActivity.this, TensorFlowActivityTemp.class);
-//                startActivity(intent);
-                Toast.makeText(MainActivity.this, getMsg(), Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, TensorFlowActivityTemp.class);
+                startActivity(intent);
             }
         });
         Button btn_exit =  (Button) findViewById(R.id.main_activity_btn_exit);
@@ -63,7 +63,6 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
         });
-
 
     }
 
@@ -106,12 +105,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    /**********************  ********************/
 
-    static {
-        System.loadLibrary("ndktest");
-    }
 
-    public native String getMsg();
 
 }

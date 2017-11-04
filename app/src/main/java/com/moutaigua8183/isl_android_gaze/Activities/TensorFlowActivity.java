@@ -32,6 +32,7 @@ import com.moutaigua8183.isl_android_gaze.Handlers.ImageProcessHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.TensorFlowHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.TimerHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.VolleyHandler;
+import com.moutaigua8183.isl_android_gaze.JNInterface.MobileGazeInterface;
 import com.moutaigua8183.isl_android_gaze.R;
 
 import org.json.JSONException;
@@ -92,6 +93,10 @@ public class TensorFlowActivity extends AppCompatActivity {
                 result_board.setText("");
                 Log.d(LOG_TAG, "pressed");
                 cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_STILL_CAPTURE);
+                /**** test ***/
+                MobileGazeInterface gazeInterface = new MobileGazeInterface();
+                byte[] res = gazeInterface.getMsg(new byte[]{1,2});
+                result_board.setText( res.toString() );
             }
         });
         view_dot_container_result = (FrameLayout) findViewById(R.id.activity_tensorflow_layout_dotHolder_result);
@@ -129,7 +134,7 @@ public class TensorFlowActivity extends AppCompatActivity {
                 image.close();
             }
         });
-        cameraHandler.startPreview(textureView);
+//        cameraHandler.startPreview(textureView);
     }
 
     @Override

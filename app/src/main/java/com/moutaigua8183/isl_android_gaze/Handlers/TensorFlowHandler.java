@@ -54,9 +54,15 @@ public class TensorFlowHandler {
 
     public float[] getEstimatedLocation(float[][][][] images){
         float[] input_array = ImageProcessHandler.toTensorFlowEyeModelArray(images);
-        tf.fillNodeFloat(INPUT_NODE,
-                new int[]{images.length, ImageProcessHandler.EYE_MODEL_INPUTSIZE_ROWS, ImageProcessHandler.EYE_MODEL_INPUTSIZE_COLUMNS, ImageProcessHandler.EYE_MODEL_INPUTSIZE_COLORS},
-                input_array);
+        tf.fillNodeFloat(
+                INPUT_NODE,
+                new int[]{
+                        images.length,
+                        ImageProcessHandler.EYE_MODEL_INPUTSIZE_ROWS,
+                        ImageProcessHandler.EYE_MODEL_INPUTSIZE_COLUMNS,
+                        ImageProcessHandler.EYE_MODEL_INPUTSIZE_COLORS},
+                input_array
+        );
         tf.runInference(OUTPUT_NODES);
         // retrieve result from TensorFlow model
         float[] loc = new float[ images.length * 2];

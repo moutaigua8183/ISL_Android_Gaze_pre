@@ -14,6 +14,7 @@ model {
             renderscriptTargetApi 18
             renderscriptSupportModeEnabled true
         }
+
     }
 
     android.buildTypes {
@@ -23,11 +24,8 @@ model {
         }
     }
     android.ndk {
-        moduleName "ndktest"
+        moduleName "MobileGazeJNI"
     }
-
-
-
 
 
 
@@ -46,7 +44,5 @@ dependencies {
     compile 'com.loopj.android:android-async-http:1.4.9'
     compile 'com.squareup.okhttp:okhttp:2.5.0'
     compile 'com.squareup.mimecraft:mimecraft:1.1.1'
-//    compile 'org.ujmp:ujmp-jmatio:0.3.+'    // to read .mat file
-//    compile 'org.ujmp:ujmp-core:0.3.+'    // to read .mat file
 
 }
