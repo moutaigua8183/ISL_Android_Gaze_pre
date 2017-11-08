@@ -2,20 +2,10 @@ package com.moutaigua8183.isl_android_gaze.Activities;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
-import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.renderscript.Allocation;
-import android.renderscript.Element;
-import android.renderscript.RenderScript;
-import android.renderscript.ScriptIntrinsicYuvToRGB;
-import android.renderscript.Type;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
@@ -26,28 +16,24 @@ import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.moutaigua8183.isl_android_gaze.FaceDetectionAPI;
 import com.moutaigua8183.isl_android_gaze.Handlers.CameraHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.DotHandler;
-import com.moutaigua8183.isl_android_gaze.Handlers.ImageProcessHandler;
-import com.moutaigua8183.isl_android_gaze.Handlers.TensorFlowHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.TimerHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.VolleyHandler;
-import com.moutaigua8183.isl_android_gaze.JNInterface.MobileGazeInterface;
+import com.moutaigua8183.isl_android_gaze.Handlers.ImageProcessHandler;
+import com.moutaigua8183.isl_android_gaze.Handlers.TensorFlowHandler;
+import com.moutaigua8183.isl_android_gaze.JNInterface.MobileGazeJniInterface;
 import com.moutaigua8183.isl_android_gaze.R;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by Mou on 9/22/2017.
@@ -94,9 +80,9 @@ public class TensorFlowActivity extends AppCompatActivity {
                 Log.d(LOG_TAG, "pressed");
                 cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_STILL_CAPTURE);
                 /**** test ***/
-                MobileGazeInterface gazeInterface = new MobileGazeInterface();
+                MobileGazeJniInterface gazeInterface = new MobileGazeJniInterface();
                 byte[] res = gazeInterface.getMsg(new byte[]{1,2});
-                result_board.setText( res.toString() );
+                //result_board.setText( (int)res[1] );
             }
         });
         view_dot_container_result = (FrameLayout) findViewById(R.id.activity_tensorflow_layout_dotHolder_result);
@@ -122,19 +108,18 @@ public class TensorFlowActivity extends AppCompatActivity {
                 if( cameraHandler.getCameraState()==CameraHandler.CAMERA_STATE_STILL_CAPTURE ) {
                     cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_PREVIEW);
                     Log.d(LOG_TAG, "Take a picture");
-//                    ByteBuffer buffer = image. getPlanes()[0]. getBuffer();
-//                    byte[] bwImageBytes = new byte[buffer.capacity()];
-//                    buffer.get(bwImageBytes);
-//                    uploadImage(bwImageBytes);
                     TimerHandler.getInstance().reset();
                     TimerHandler.getInstance().tic();
-                    ImageProcessHandler.YUVtoJPEGByte(image, TensorFlowActivity.this);
+                    int[] rgbIntArray = ImageProcessHandler.getRotatedRGBImage(image);
+//                    Bitmap img = Bitmap.createBitmap(rgbIntArray, height/2, width/2, Bitmap.Config.RGB_565);
+//                    saveBitmapIntoFile(img, "/Download/bitmapJNI.jpg");
+                    FaceDetectionAPI faceAPI = new FaceDetectionAPI();
                     Log.d(LOG_TAG, String.valueOf(TimerHandler.getInstance().toc()));
                 }
                 image.close();
             }
         });
-//        cameraHandler.startPreview(textureView);
+        cameraHandler.startPreview(textureView);
     }
 
     @Override
@@ -313,6 +298,27 @@ public class TensorFlowActivity extends AppCompatActivity {
             output.close();
         } catch (IOException e) {
             Log.e(LOG_TAG, "Exception occurred while saving picture to external storage ", e);
+        }
+    }
+
+    public void saveBitmapIntoFile(Bitmap bitmap, String filename){
+        FileOutputStream outFile = null;
+        try {
+            String base = Environment.getExternalStorageDirectory().getAbsolutePath().toString();
+            String imagePath = "/"+ base + filename;
+            outFile = new FileOutputStream(imagePath);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outFile); // bmp is your Bitmap instance
+            // PNG is a lossless format, the compression factor (100) is ignored
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (outFile != null) {
+                    outFile.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

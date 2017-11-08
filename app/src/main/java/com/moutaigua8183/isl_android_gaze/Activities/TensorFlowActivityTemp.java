@@ -1,21 +1,11 @@
 package com.moutaigua8183.isl_android_gaze.Activities;
 
 import android.content.res.AssetManager;
-import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
-import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.renderscript.Allocation;
-import android.renderscript.Element;
-import android.renderscript.RenderScript;
-import android.renderscript.ScriptIntrinsicYuvToRGB;
-import android.renderscript.Type;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
@@ -32,19 +22,18 @@ import com.moutaigua8183.isl_android_gaze.Handlers.ImageProcessHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.TensorFlowHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.TimerHandler;
 import com.moutaigua8183.isl_android_gaze.Handlers.VolleyHandler;
+import com.moutaigua8183.isl_android_gaze.JNInterface.MobileGazeJniInterface;
 import com.moutaigua8183.isl_android_gaze.R;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Timer;
 
 /**
@@ -100,10 +89,15 @@ public class TensorFlowActivityTemp extends AppCompatActivity {
                 if (cameraHandler.getCameraState() != CameraHandler.CAMERA_STATE_STILL_CAPTURE){
                     result_board.setText("");
                     Log.d(LOG_TAG, "pressed");
-                    cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_STILL_CAPTURE);
-                    TimerHandler.getInstance().reset();
-                    TimerHandler.getInstance().tic();
-                    handler.postDelayed(runnable, 10);
+//                    cameraHandler.setCameraState(CameraHandler.CAMERA_STATE_STILL_CAPTURE);
+//                    TimerHandler.getInstance().reset();
+//                    TimerHandler.getInstance().tic();
+//                    handler.postDelayed(runnable, 10);
+                    MobileGazeJniInterface jni = new MobileGazeJniInterface();
+                    int res1 = jni.getAdditionRes(3,40);
+                    String res2 = jni.getWelcomeString();
+                    Log.d(LOG_TAG, String.valueOf(res1));
+                    Log.d(LOG_TAG, res2);
                 }
             }
         });
@@ -164,7 +158,7 @@ public class TensorFlowActivityTemp extends AppCompatActivity {
                 image.close();
             }
         });
-        cameraHandler.startPreview(textureView);
+//        cameraHandler.startPreview(textureView);
     }
 
     @Override

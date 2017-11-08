@@ -3,7 +3,6 @@ package com.moutaigua8183.isl_android_gaze.Handlers;
 import android.content.Context;
 import android.graphics.Point;
 import android.util.Log;
-import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;

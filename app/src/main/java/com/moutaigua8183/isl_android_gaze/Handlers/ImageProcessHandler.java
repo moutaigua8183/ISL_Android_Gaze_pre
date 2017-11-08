@@ -9,7 +9,8 @@ import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
-import android.util.Log;
+
+import com.moutaigua8183.isl_android_gaze.JNInterface.MobileGazeJniInterface;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -151,6 +152,23 @@ public class ImageProcessHandler {
             }
         }
         return input_array;
+    }
+
+    public static int[] getRotatedRGBImage(Image image){
+        ByteBuffer yBuffer = image.getPlanes()[0].getBuffer();
+        ByteBuffer uBuffer = image.getPlanes()[1].getBuffer();
+        ByteBuffer vBuffer = image.getPlanes()[2].getBuffer();
+        byte[] yBytes = new byte[yBuffer.capacity()];
+        byte[] uBytes = new byte[uBuffer.capacity()];
+        byte[] vBytes = new byte[vBuffer.capacity()];
+        yBuffer.get(yBytes);
+        uBuffer.get(uBytes);
+        vBuffer.get(vBytes);
+        int width = image.getWidth();
+        int height = image.getHeight();
+        MobileGazeJniInterface jniHandler = new MobileGazeJniInterface();
+        int[] rgbIntArray = jniHandler.getRotatedRGBImage(yBytes, uBytes, vBytes, width, height);
+        return rgbIntArray;
     }
 
     public static byte[] YUVtoJPEGByte(Image image, Context context) {
