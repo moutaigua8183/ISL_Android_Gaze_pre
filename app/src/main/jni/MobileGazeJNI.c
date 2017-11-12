@@ -3,7 +3,7 @@
 #include "mou_jni_test.h"
 
 JNIEXPORT jbyteArray JNICALL
-Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_getMsg(JNIEnv *env,
+Java_com_iai_mdf_JNInterface_MobileGazeJniInterface_getMsg(JNIEnv *env,
                                                                                  jobject instance,
                                                                                  jbyteArray content_) {
     jbyteArray *contentPtr = (*env)->GetByteArrayElements(env, content_, NULL);
@@ -15,7 +15,7 @@ Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_get
 }
 
 JNIEXPORT jintArray JNICALL
-Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_getRotatedRGBImage(
+Java_com_iai_mdf_JNInterface_MobileGazeJniInterface_getRotatedRGBImage(
         JNIEnv *env, jobject instance, jbyteArray yBytes_, jbyteArray uBytes_, jbyteArray vBytes_, jint origWidth_, jint origHeight_) {
     int i = 0;
     int width = origWidth_;
@@ -51,32 +51,40 @@ Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_get
 //    newVBytes[yLength-2] = *(vBytes + uvLength -1);
 //    newVBytes[yLength-1] = *(vBytes + uvLength -1);
 
-    // YUV -> RGB  + rotation
+//    // YUV -> RGB  + rotation     with the size of U & V planes
+//    jintArray rgbIntArray = (*env)->NewIntArray(env, uvLength);
+//    jint *rgbInt = (*env)->GetIntArrayElements(env, rgbIntArray, NULL);
+//    for(i = 0; i < uvLength; ++i) {
+//        uvCol = (i % uvWidth) * 2;
+//        uvRow = (i / uvWidth) * 2;
+//        jint R = (char)*(yBytes + uvRow*width + uvCol) + 1.40200 * ((char)*(vBytes+i)-128);
+//        jint G = (char)*(yBytes + uvRow*width + uvCol) - 0.34414 * ((char)*(uBytes+i)-128) - 0.71414 * ((char)*(vBytes+i)-128);
+//        jint B = (char)*(yBytes + uvRow*width + uvCol) + 1.77200 * ((char)*(uBytes+i)-128);
+//        R = (R > 255)? 255 : (R < 0)? 0 : R;
+//        G = (G > 255)? 255 : (G < 0)? 0 : G;
+//        B = (B > 255)? 255 : (B < 0)? 0 : B;
+//        jint RGB = 0xff000000 | (R << 16) | (G << 8) | B;
+//        origX = i % (width/2);
+//        origY = i / (width/2);
+//        newI = (height/2) * ((width/2) - 1 - origX) + origY;
+//        rgbInt[newI] = RGB;
+//    }
+    // YUV -> RGB  + rotation      with the size of Y plane
     jintArray rgbIntArray = (*env)->NewIntArray(env, yLength);
     jint *rgbInt = (*env)->GetIntArrayElements(env, rgbIntArray, NULL);
-    for(i = 0; i < uvLength; ++i) {
-//        uvCol = (i % width) / 2;
-//        uvRow = i / width / 2;
-//        jint R = (jint)*(yBytes+i) + 1.40200 * (jint)(*(uBytes+uvRow*uvWidth+uvCol));
-//        jint G = (jint)*(yBytes+i) - 0.34414 * (jint)(*(vBytes+uvRow*uvWidth+uvCol)) - 0.71414 * (jint)(*(uBytes+uvRow*uvWidth+uvCol));
-//        jint B = (jint)*(yBytes+i) + 1.77200 * (jint)(*(vBytes+uvRow*uvWidth+uvCol));
-//        jint RGB = 0xff000000 | (R << 16) | (G << 8) | B;
-//        origX = i % width;
-//        origY = i / width;
-//        newI = height * (width - 1 - origX) + origY;
-//        rgbInt[newI] = RGB;
-        uvCol = (i % uvWidth) * 2;
-        uvRow = (i / uvWidth) * 2;
-        jint R = (char)*(yBytes + uvRow*width + uvCol) + 1.40200 * ((char)*(vBytes+i)-128);
-        jint G = (char)*(yBytes + uvRow*width + uvCol) - 0.34414 * ((char)*(uBytes+i)-128) - 0.71414 * ((char)*(vBytes+i)-128);
-        jint B = (char)*(yBytes + uvRow*width + uvCol) + 1.77200 * ((char)*(uBytes+i)-128);
+    for(i = 0; i < yLength; ++i) {
+        uvCol = (i % width) / 2;
+        uvRow = i / width / 2;
+        jint R = (char)*(yBytes + i) + 1.40200 * ((char)*(vBytes+uvRow*uvWidth+uvCol)-128);
+        jint G = (char)*(yBytes + i) - 0.34414 * ((char)*(uBytes+uvRow*uvWidth+uvCol)-128) - 0.71414 * ((char)*(vBytes+uvRow*uvWidth+uvCol)-128);
+        jint B = (char)*(yBytes + i) + 1.77200 * ((char)*(uBytes+uvRow*uvWidth+uvCol)-128);
         R = (R > 255)? 255 : (R < 0)? 0 : R;
         G = (G > 255)? 255 : (G < 0)? 0 : G;
         B = (B > 255)? 255 : (B < 0)? 0 : B;
         jint RGB = 0xff000000 | (R << 16) | (G << 8) | B;
-        origX = i % (width/2);
-        origY = i / (width/2);
-        newI = (height/2) * ((width/2) - 1 - origX) + origY;
+        origX = i % width;
+        origY = i / width;
+        newI = height * (width - 1 - origX) + origY;
         rgbInt[newI] = RGB;
     }
 
@@ -90,7 +98,7 @@ Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_get
 }
 
 JNIEXPORT jint JNICALL
-Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_getAdditionRes(
+Java_com_iai_mdf_JNInterface_MobileGazeJniInterface_getAdditionRes(
         JNIEnv *env, jobject instance, jint a, jint b) {
 
     return add(a, b);
@@ -98,7 +106,7 @@ Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_get
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_moutaigua8183_isl_1android_1gaze_JNInterface_MobileGazeJniInterface_getWelcomeString(
+Java_com_iai_mdf_JNInterface_MobileGazeJniInterface_getWelcomeString(
         JNIEnv *env, jobject instance) {
 
     jstring res = welcome();

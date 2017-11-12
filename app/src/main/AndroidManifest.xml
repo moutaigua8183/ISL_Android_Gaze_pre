@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.moutaigua8183.isl_android_gaze">
+    package="com.iai.mdf">
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -15,16 +15,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".Activities.MainActivity">
+        <activity android:name="com.iai.mdf.Activities.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".Activities.DataCollectionActivity" />
-        <activity android:name=".Activities.TensorFlowActivity" />
-        <activity android:name=".Activities.TensorFlowActivityTemp" />
+        <activity android:name="com.iai.mdf.Activities.DataCollectionActivity" />
+        <activity android:name="com.iai.mdf.Activities.TensorFlowActivity" />
+        <activity android:name="com.iai.mdf.Activities.TensorFlowActivityTemp" />
     </application>
 
 </manifest>

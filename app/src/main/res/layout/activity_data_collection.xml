@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:id="@+id/activity_data_collection_layout_fragment_holder"
-    tools:context="com.moutaigua8183.isl_android_gaze.com.moutaigua8183.isl_android_gaze.Activities.MainActivity">
+    tools:context="com.iai.mdf.com.moutaigua8183.isl_android_gaze.Activities.MainActivity">
 
 
 
